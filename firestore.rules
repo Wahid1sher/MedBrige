@@ -1,0 +1,8 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Foundation only. Do not enable patient sharing until invitation, consent,
+    // access revocation, payload validation, and emulator tests are implemented.
+    match /{document=**} { allow read, write: if false; }
+  }
+}

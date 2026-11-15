@@ -1,0 +1,8 @@
+node_modules/
+dist/
+dist-extension/
+.npm-cache/
+public/ocr/
+.env*
+.git/
+coverage/

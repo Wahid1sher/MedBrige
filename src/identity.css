@@ -1,0 +1,413 @@
+/* Integrated navigation: one continuous sky, a shorter path to content. */
+.nav-copy {
+  min-width: 0;
+  flex: 1 !important;
+}
+.nav-copy > strong {
+  font-weight: 550;
+  font-size: 14px;
+  line-height: 1.5;
+  display: block;
+}
+.nav-icon {
+  display: grid;
+  place-items: center;
+  width: 25px;
+  height: 27px;
+  flex-shrink: 0;
+}
+.mobile-brand-period {
+  color: #ffdf94;
+  margin-left: -6px;
+}
+@media (min-width: 901px) {
+  .app-shell {
+    background: linear-gradient(180deg, #3169b7 0, #3974c3 470px, #cbdceb 850px, #f3f6fc 1120px);
+  }
+  .main-shell {
+    margin-left: 212px;
+    border-radius: 0;
+    background: transparent;
+  }
+  .page-content {
+    padding-inline: 28px;
+  }
+  .topbar {
+    padding-inline: 28px;
+  }
+  .sidebar {
+    inset: 0 auto 0 0;
+    width: 212px;
+    border: 0;
+    border-right: 1px solid #ffffff20;
+    border-radius: 0;
+    padding: 28px 16px 0;
+    background: linear-gradient(180deg, #3169b7 0, #3974c3 470px, #cbdceb 850px, #f3f6fc 1120px);
+    box-shadow: none;
+    scrollbar-width: thin;
+    scrollbar-color: #aac7ed transparent;
+    overflow-y: auto;
+  }
+  .sidebar-brand {
+    padding: 0 3px 33px;
+  }
+  .sidebar .brand {
+    color: white;
+    gap: 8px;
+    font-size: 23px;
+    letter-spacing: -0.9px;
+    font-weight: 750;
+    padding: 0;
+    min-height: 42px;
+  }
+  .sidebar .brand-symbol {
+    background: #ffffff0d;
+    border: 1px solid #ffffff38;
+    color: #fff;
+    width: 36px;
+    height: 39px;
+    border-radius: 12px;
+  }
+  .sidebar .brand-symbol svg {
+    width: 35px;
+    height: 35px;
+  }
+  .sidebar .brand-period {
+    color: #ffdf94;
+  }
+  .brand-tagline {
+    display: block;
+    margin: 8px 0 0 3px;
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0;
+    color: #fff;
+    line-height: 1.7;
+  }
+  .sidebar-section-heading {
+    padding: 0 12px;
+    margin: 0 0 12px;
+  }
+  .sidebar .nav-label {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    padding: 0;
+    margin: 0;
+    color: #edf4ff;
+  }
+  .sidebar nav {
+    display: grid;
+    gap: 5px;
+  }
+  .sidebar nav a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 12px;
+    min-height: 49px;
+    border: 1px solid transparent;
+    border-radius: 13px;
+    color: #fff;
+    font-size: 14px;
+    box-shadow: none;
+  }
+  .sidebar nav a > span {
+    flex: initial;
+  }
+  .sidebar nav a svg {
+    color: #e8f1ff;
+    stroke-width: 1.7;
+  }
+  .sidebar nav a:hover {
+    background: #ffffff17;
+    color: #fff;
+  }
+  .sidebar nav a.active {
+    background: #f7faff;
+    border-color: #ffffffcc;
+    color: #244f89;
+    box-shadow: 0 2px 8px #173f7a0a;
+  }
+  .sidebar nav a.active svg {
+    color: #396eb3;
+  }
+  .sidebar nav a.active .nav-copy > strong {
+    font-weight: 650;
+  }
+  .sidebar nav small {
+    background: #ffffff26;
+    border: 1px solid #ffffff42;
+    color: #fff;
+    min-width: 21px;
+    font-size: 10px;
+    font-weight: 550;
+    text-align: center;
+    padding: 1px 5px;
+    border-radius: 6px;
+  }
+  .sidebar nav a.active small {
+    background: #e8f0fc;
+    border-color: #dce7f8;
+    color: #3e6495;
+  }
+  .nav-active-dot {
+    height: 5px;
+    width: 5px;
+    border-radius: 50%;
+    background: #bd8a31;
+    flex-shrink: 0;
+  }
+  .sidebar-add {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 19px 0 0;
+    padding: 10px 12px;
+    min-height: 46px;
+    border: 1px solid #ffffff55;
+    border-radius: 13px;
+    background: #ffffff0d;
+    color: #fff;
+    box-shadow: none;
+  }
+  .sidebar-add:hover {
+    background: #ffffff20;
+  }
+  .sidebar-add > span {
+    width: 25px;
+    height: 25px;
+    display: grid;
+    place-items: center;
+    color: #ffe3a3;
+    flex-shrink: 0;
+  }
+  .sidebar-add > div {
+    font-size: 12px;
+    line-height: 1.5;
+    font-weight: 550;
+    flex: 1;
+  }
+  .sidebar-add > svg {
+    width: 14px;
+    color: #e1edff;
+  }
+  .sidebar-bottom {
+    margin-top: 23px;
+    padding-top: 0;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
+  .sidebar-privacy-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 19px 10px 15px;
+    border-top: 1px solid #ffffff35;
+    color: #fff;
+    border-radius: 0;
+  }
+  .sidebar-privacy-link:hover {
+    background: #ffffff0a;
+  }
+  .sidebar-privacy-link > svg:first-child {
+    color: #ffdf94;
+    width: 20px;
+    flex-shrink: 0;
+  }
+  .sidebar-privacy-link > span {
+    flex: 1;
+    min-width: 0;
+  }
+  .sidebar-privacy-link strong {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.6;
+  }
+  .sidebar-privacy-link small {
+    display: block;
+    color: #f1f6ff;
+    font-size: 10px;
+    line-height: 1.7;
+    margin-top: 3px;
+  }
+  .sidebar-privacy-link > svg:last-child {
+    color: #e3edfb;
+    width: 13px;
+  }
+  .sidebar-foot {
+    margin-top: auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 24px 10px;
+    color: #254d80;
+  }
+  .sidebar-foot > span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 9px;
+    letter-spacing: 0.1px;
+  }
+  .sidebar-foot i {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: #315f98;
+  }
+  .sidebar-foot > svg {
+    color: #315f98;
+  }
+}
+@media (min-width: 1600px) {
+  .sidebar {
+    width: 220px;
+    padding-inline: 18px;
+  }
+  .main-shell {
+    margin-left: 220px;
+  }
+  .page-content,
+  .topbar {
+    padding-inline: 32px;
+  }
+}
+@media (max-width: 900px) {
+  .mobile-brand {
+    font-size: 23px;
+    font-weight: 750;
+    gap: 8px;
+    letter-spacing: -0.8px;
+  }
+  .mobile-brand .brand-symbol {
+    color: white;
+    background: #ffffff0d;
+    border: 1px solid #ffffff45;
+    width: 37px;
+    height: 39px;
+    border-radius: 13px;
+  }
+  .mobile-brand .brand-symbol svg {
+    width: 36px;
+    height: 36px;
+  }
+  .mobile-nav .nav-copy {
+    flex: initial !important;
+  }
+  .mobile-nav .nav-copy > strong {
+    font-size: 10px;
+    font-weight: 500;
+    line-height: 1.4;
+  }
+  .mobile-nav a.active .nav-copy > strong {
+    font-weight: 700;
+  }
+  .mobile-nav .nav-icon {
+    width: 24px;
+    height: 24px;
+  }
+  .mobile-nav a {
+    gap: 5px;
+  }
+  .mobile-nav a > span {
+    flex: initial;
+  }
+}
+@media (max-width: 650px) {
+  .mobile-brand {
+    font-size: 22px;
+  }
+  .mobile-brand .brand-symbol {
+    width: 35px;
+    height: 36px;
+    border-radius: 12px;
+  }
+  .mobile-brand .brand-symbol svg {
+    height: 34px;
+    width: 34px;
+  }
+  .mobile-nav .nav-copy > strong {
+    font-size: 9px;
+  }
+}
+.sample-pill {
+  margin: 7px 0 13px;
+  text-align: center;
+}
+.sample-pill-stage {
+  height: 115px;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(ellipse at 50% 77%, #eee9de70, transparent 65%);
+}
+.sample-pill-stage > svg {
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+  overflow: visible;
+}
+.sample-pill figcaption > span {
+  display: block;
+  font-size: 11px;
+  line-height: 1.7;
+  color: #516781;
+  font-weight: 550;
+}
+.sample-pill figcaption > small {
+  display: block;
+  font-size: 10px;
+  line-height: 1.7;
+  color: #697589;
+  margin-top: 1px;
+}
+.dose-description {
+  margin-top: 0;
+}
+@media (max-width: 650px) {
+  .sample-pill {
+    margin: 4px 0 11px;
+  }
+  .sample-pill-stage {
+    height: 74px;
+  }
+  .sample-pill figcaption > span {
+    font-size: 10px;
+  }
+  .sample-pill figcaption > small {
+    font-size: 9px;
+    line-height: 1.6;
+  }
+  .page-overview .day-arc {
+    height: 142px;
+  }
+  .dose-description {
+    font-size: 10px;
+  }
+}
+.sample-pill-stage {
+  height: 120px;
+}
+.sample-pill-stage > svg {
+  width: 220px;
+  height: 120px;
+  max-width: 100%;
+}
+.sample-pill figcaption {
+  margin-top: 5px;
+}
+@media (max-width: 650px) {
+  .sample-pill-stage {
+    height: 76px;
+  }
+  .sample-pill-stage > svg {
+    width: 140px;
+    height: 76px;
+  }
+  .sample-pill figcaption {
+    margin-top: 2px;
+  }
+}

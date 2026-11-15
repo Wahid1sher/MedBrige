@@ -1,0 +1,16 @@
+node_modules/
+dist/
+dist-extension/
+.env.local
+.env.*.local
+coverage/
+*.log
+.firebase/
+
+.npm-cache/
+public/ocr/
+.env
+
+.env*
+!.env.example
+*.medbrige

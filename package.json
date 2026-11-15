@@ -1,0 +1,45 @@
+{
+  "name": "medbrige",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/prepare-ocr.mjs && vite --host 127.0.0.1 --port 5190",
+    "build": "node scripts/prepare-ocr.mjs && tsc --noEmit && vite build && node scripts/offline.mjs && npm run build:extension",
+    "build:extension": "vite build --config vite.extension.config.ts && node scripts/extension.mjs",
+    "test": "vitest run",
+    "preview": "vite preview --host 127.0.0.1",
+    "test:ocr": "node tests/ocr.integration.mjs",
+    "format": "prettier --write . --ignore-unknown",
+    "format:check": "prettier --check . --ignore-unknown"
+  },
+  "dependencies": {
+    "@fontsource-variable/dm-sans": "5.3.0",
+    "@fontsource-variable/manrope": "5.3.0",
+    "@fontsource/atkinson-hyperlegible": "5.3.0",
+    "firebase": "13.3.0",
+    "lucide-react": "1.73.0",
+    "pdfjs-dist": "6.5.438",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "tesseract.js": "^7.0.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.3.5",
+    "@tesseract.js-data/eng": "^1.0.0",
+    "@tesseract.js-data/spa": "^1.0.0",
+    "@types/chrome": "0.3.7",
+    "@types/node": "26.6.6",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.3.0",
+    "prettier": "^3.10.1",
+    "tailwindcss": "4.3.5",
+    "typescript": "5.9.3",
+    "vite": "8.3.8",
+    "vitest": "5.1.0"
+  },
+  "overrides": {
+    "@grpc/grpc-js": "^1.13.6"
+  }
+}

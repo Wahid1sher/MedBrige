@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "MedBrige · Local privacy review",
+  "description": "Review selected portal text locally. No background scraping or automatic uploads.",
+  "version": "0.1.0",
+  "permissions": ["activeTab", "scripting"],
+  "action": { "default_title": "Open MedBrige local privacy review" },
+  "background": { "service_worker": "background.js" },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'none'; connect-src 'self';"
+  }
+}
