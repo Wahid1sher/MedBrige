@@ -17,6 +17,7 @@ import { DischargeUploader } from './components/DischargeUploader';
 import { PiiScrubberView } from './components/PiiScrubberView';
 import { draftToPlan, MedicationSchedule } from './components/MedicationSchedule';
 import { CaregiverSync } from './components/CaregiverSync';
+import { LocalAiCheck } from './components/LocalAiCheck';
 import {
   scrubPii,
   approveCloudProcessing,
@@ -64,6 +65,7 @@ export default function App() {
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
     [progress, setProgress] = useState<AiProgress | null>(null);
+  const [localCheckBusy, setLocalCheckBusy] = useState(false);
   const [page, setPage] = useState<Page>(route),
     [pane, setPane] = useState<'source' | 'privacy'>(() =>
       location.hash === '#privacy' ? 'privacy' : 'source',
@@ -158,7 +160,12 @@ export default function App() {
   }
   async function analyze() {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 180000);
+    let timedOut = false;
+    let lastStage: AiProgress['stage'] = 'preparing-local';
+    const timeout = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, 180000);
     pending.current?.abort();
     pending.current = controller;
     setBusy(true);
@@ -170,7 +177,10 @@ export default function App() {
         policy,
         ...(permit ? { cloudPermit: permit } : {}),
         signal: controller.signal,
-        onProgress: setProgress,
+        onProgress: (event) => {
+          lastStage = event.stage;
+          setProgress(event);
+        },
       });
       if (!controller.signal.aborted) {
         setAnalysis(result);
@@ -185,13 +195,16 @@ export default function App() {
       if (pending.current === controller)
         setError(
           controller.signal.aborted
-            ? 'Extraction cancelled or timed out. No partial result was saved.'
+            ? timedOut
+              ? `${lastStage === 'preparing-local' ? 'Local model setup' : lastStage === 'extracting' ? 'AI extraction' : 'Source checking'} timed out after 3 minutes. No partial result was saved. Use “Check local AI” below to test the model separately.`
+              : 'Extraction cancelled. No partial result was saved.'
             : e instanceof Error
               ? e.message
               : 'Analysis did not finish.',
         );
     } finally {
       clearTimeout(timeout);
+      controller.abort();
       if (pending.current === controller) {
         pending.current = null;
         setBusy(false);
@@ -376,7 +389,7 @@ export default function App() {
               </div>
               <button
                 className="button primary extract-button"
-                disabled={busy || !raw.trim() || !firebaseConfigured()}
+                disabled={busy || localCheckBusy || !raw.trim() || !firebaseConfigured()}
                 aria-describedby={!firebaseConfigured() ? 'ai-setup-help' : undefined}
                 onClick={() => void analyze()}
               >
@@ -413,6 +426,7 @@ export default function App() {
                 {error}
               </p>
             )}
+            {firebaseConfigured() && <LocalAiCheck disabled={busy} onBusy={setLocalCheckBusy} />}
           </>
         )}
         {page === 'medicines' && (

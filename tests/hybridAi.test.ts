@@ -176,6 +176,17 @@ describe('privacy-aware inference routing', () => {
   });
 });
 describe('AI source validation', () => {
+  it('rejects dropped units and dosage forms even when a bare number occurs in the source', () => {
+    for (const [key, value] of [
+      ['strength', '0.5'],
+      ['dose', '1'],
+      ['route', 'tablet'],
+    ]) {
+      const data = JSON.parse(reply);
+      data.medications[0][key!] = field(value!);
+      expect(() => parseMedicationResponse(JSON.stringify(data), quote)).toThrow(/incomplete/);
+    }
+  });
   it('keeps exact source wording and missing timing as null', () => {
     const meds = parseMedicationResponse(reply, quote);
     expect(meds[0]!.strength!.value).toBe('0.5 mg');

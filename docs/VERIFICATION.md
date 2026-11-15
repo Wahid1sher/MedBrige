@@ -2,7 +2,7 @@
 
 ## Passed automated checks
 
-- 44 Vitest service tests. This includes cancellation of an engine that ignores AbortSignal, retention of route/duration/status, exact decimal evidence checks, consent revocation between sections, strict private routing, encrypted round trips, wrong passphrases, tampering, schedule limits and handoff filtering.
+- 48 Vitest service tests. This includes cancellation of an engine that ignores AbortSignal, native model cancellation and retry isolation, probe provenance, rejection of missing dose units/forms, retention of route/duration/status, exact decimal evidence checks, consent revocation between sections, strict private routing, encrypted round trips, wrong passphrases, tampering, schedule limits and handoff filtering.
 - Actual local OCR integration: synthetic image read with 95% reported confidence; expected name, MRN, 0.5 mg decimal and second medicine matched.
 - TypeScript, production PWA build and MV3 extension build.
 
@@ -31,3 +31,13 @@ All test documents are synthetic. Service-engine mocks are not represented as re
 
 - Real Chrome UI: Cancel extraction returned the interface to its idle state with no partial result saved.
 - An encrypted handoff was actually downloaded by Chrome. The downloaded file was decrypted outside the browser using the test passphrase; it contained one reviewed synthetic Examplemed entry, the correct 0.5 mg strength and the manually entered 08:00 time. Its saved ciphertext did not contain the medicine name in plaintext.
+
+## Local timeout investigation
+
+- A fixed short prompt completed through Firebase AI Logic with `ON_DEVICE` provenance in desktop Chrome. It used no document text and allowed no cloud fallback.
+- A previous nested response grammar allowed a null medicine name. A local reply contained an all-null entry (133 characters), correctly rejected by validation. The local schema now uses standard JSON Schema null branches, requires a non-null name and bounds output lengths/counts.
+- Native Chrome session and prompt options now receive the request AbortSignal. Retry models are scoped to each signal so a cancelled session is not reused. Completed requests are also aborted for cleanup.
+- An early synthetic extraction omitted units/forms. Independent validation now rejects bare numeric strength/dose and dosage forms misclassified as routes. Prompt/schema guidance was tightened without weakening exact source checks.
+- The revised real local extraction accepted a synthetic Amoxicillin entry preserving **250 mg**, **1 capsule**, **by mouth**, **every 8 hours** and **5 days**. This is a fictional test instruction, not medication advice. Screenshot: `local-ai-verified.png`.
+- The complete original fictional discharge sample then also passed real local inference: Examplemed **0.5 mg**, **1 tablet**, **by mouth**, **once daily**, **Continue**; Samplemed **10 mg**, **1 tablet**, **by mouth**, **every 12 hours**, **5 days**. The medicine review displayed **Firebase AI Logic · on-device** and required human review. Cloud permission remained off.
+- This verifies local execution, not Nano 4 specifically. The user's Chrome report listed `nano_v3_gpu_component` as ready; no Nano 4 claim is made.
