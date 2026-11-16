@@ -1,79 +1,66 @@
-import { useEffect, useRef, useState } from 'react';
-import { checkLocalAi } from '../services/hybridAi';
+import { LoaderCircle, Cpu, ArrowRight, X } from 'lucide-react';
+import type { LocalAiCheckState } from '../state/useLocalAiCheck';
 
 export function LocalAiCheck({
   disabled,
-  onBusy,
+  check,
+  compact = false,
 }: {
   disabled: boolean;
-  onBusy: (value: boolean) => void;
+  check: LocalAiCheckState;
+  compact?: boolean;
 }) {
-  const pending = useRef<AbortController | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState('');
-  useEffect(
-    () => () => {
-      pending.current?.abort();
-      onBusy(false);
-    },
-    [onBusy],
-  );
-  async function check() {
-    const controller = new AbortController();
-    pending.current = controller;
-    setBusy(true);
-    onBusy(true);
-    let stage = 'Checking model setup';
-    let timedOut = false;
-    const timeout = setTimeout(() => {
-      timedOut = true;
-      controller.abort();
-    }, 45000);
-    try {
-      await checkLocalAi(controller.signal, (next) => {
-        stage = next;
-        setMessage(next);
-      });
-      setMessage(
-        'Local AI replied through Firebase AI Logic. This checks local execution, not the model version. You can now try extraction.',
-      );
-    } catch (error) {
-      setMessage(
-        timedOut
-          ? `${stage} timed out after 45 seconds. The test sent no document text. Keep Chrome in the foreground, close other AI tabs, and restart Chrome before trying again.`
-          : controller.signal.aborted
-            ? 'Local AI check cancelled.'
-            : `Local AI check failed: ${error instanceof Error ? error.message : 'No reply'}. No document text was used.`,
-      );
-    } finally {
-      clearTimeout(timeout);
-      controller.abort();
-      pending.current = null;
-      setBusy(false);
-      onBusy(false);
-    }
-  }
   return (
-    <section className="setup-note" aria-label="Local AI check">
-      <div>
-        <strong>Having trouble with local AI?</strong>
-        <p>
-          Test a short reply first. This uses no document text and cannot fall back to the cloud.
-        </p>
-        <button
-          className="button secondary"
-          disabled={disabled || busy}
-          onClick={() => void check()}
-        >
-          {busy ? 'Checking local AI…' : 'Check local AI'}
-        </button>
-        {busy && (
-          <button className="button secondary" onClick={() => pending.current?.abort()}>
+    <section
+      className={`local-ai-check ${compact ? 'compact' : ''}`}
+      aria-label={compact ? 'Sidebar local AI check' : 'Local AI check'}
+    >
+      {!compact && (
+        <>
+          <span className="check-eyebrow">
+            <Cpu size={16} aria-hidden="true" /> ON YOUR DEVICE
+          </span>
+          <h2>Having trouble with local AI?</h2>
+          <p>
+            Test a short reply first. This uses no document text and cannot fall back to the cloud.
+          </p>
+        </>
+      )}
+      <div className="local-check-actions">
+        {!(compact && check.busy) && (
+          <button
+            className="button secondary"
+            disabled={disabled || check.busy}
+            onClick={() => void check.start()}
+          >
+            {check.busy ? (
+              <LoaderCircle size={16} className="spin" aria-hidden="true" />
+            ) : (
+              <Cpu size={16} aria-hidden="true" />
+            )}
+            {check.busy ? 'Checking local AI…' : 'Check local AI'}
+            {!compact && !check.busy && <ArrowRight size={16} aria-hidden="true" />}
+          </button>
+        )}
+        {check.busy && (
+          <button className="button secondary cancel-check" onClick={check.cancel}>
+            <X size={15} aria-hidden="true" />
             Cancel check
           </button>
         )}
-        {message && <p role="status">{message}</p>}
       </div>
+      {!compact && check.message && (
+        <p role="status" className={`local-check-message ${check.outcome}`}>
+          {check.message}
+          {check.busy && ` · ${check.elapsed}s`}
+        </p>
+      )}
+      {!compact && (
+        <p className="local-check-footnote">
+          First-time model setup can take longer. Keep this Chrome tab open. A successful check does
+          not confirm a specific Nano version.
+        </p>
+      )}
     </section>
   );
 }

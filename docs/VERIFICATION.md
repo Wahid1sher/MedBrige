@@ -2,7 +2,7 @@
 
 ## Passed automated checks
 
-- 48 Vitest service tests. This includes cancellation of an engine that ignores AbortSignal, native model cancellation and retry isolation, probe provenance, rejection of missing dose units/forms, retention of route/duration/status, exact decimal evidence checks, consent revocation between sections, strict private routing, encrypted round trips, wrong passphrases, tampering, schedule limits and handoff filtering.
+- 57 Vitest service tests. This includes cancellation of an engine that ignores AbortSignal, native model cancellation and retry isolation, probe provenance, rejection of missing dose units/forms, retention of route/duration/status, exact decimal evidence checks, consent revocation between sections, strict private routing, encrypted round trips, wrong passphrases, tampering, schedule limits and handoff filtering. Added regressions cover progressing downloads, separate reply deadlines, the first verified streamed token, competing jobs and cloud-first consent scope.
 - Actual local OCR integration: synthetic image read with 95% reported confidence; expected name, MRN, 0.5 mg decimal and second medicine matched.
 - TypeScript, production PWA build and MV3 extension build.
 
@@ -41,3 +41,12 @@ All test documents are synthetic. Service-engine mocks are not represented as re
 - The revised real local extraction accepted a synthetic Amoxicillin entry preserving **250 mg**, **1 capsule**, **by mouth**, **every 8 hours** and **5 days**. This is a fictional test instruction, not medication advice. Screenshot: `local-ai-verified.png`.
 - The complete original fictional discharge sample then also passed real local inference: Examplemed **0.5 mg**, **1 tablet**, **by mouth**, **once daily**, **Continue**; Samplemed **10 mg**, **1 tablet**, **by mouth**, **every 12 hours**, **5 days**. The medicine review displayed **Firebase AI Logic · on-device** and required human review. Cloud permission remained off.
 - This verifies local execution, not Nano 4 specifically. The user's Chrome report listed `nano_v3_gpu_component` as ready; no Nano 4 claim is made.
+
+## Home/privacy update — November 16, 2026
+
+- Added the linked historical discharge-study finding to Today, explicitly scoped to one study rather than presented as a universal risk estimate.
+- Shared the local AI check across Today, Documents and the sidebar. Navigating while downloading preserved the check and its Cancel control.
+- Added Strict local / Balanced / Best quality controls. Cloud-first approval has its own identity-bound permit scope; fallback-only permission is rejected before any cloud-first model operation.
+- Setup download progress was observed after the user enabled Chrome's Gemma 4 preview flag and restarted. A later plain short reply attempt still reached its 90-second deadline. This is documented as a failed preview attempt, not a successful Nano 4 run.
+- Readiness now checks the first SDK-provenanced streamed text and cancels the remainder, so it does not require an unlimited end-of-turn wait. This behavior is regression-tested; real preview success must be verified separately.
+- Responsive DOM measurements passed at 320px, 375px and 812px landscape: content width equaled viewport content width. Native phone testing remains separate.

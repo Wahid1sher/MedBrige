@@ -18,6 +18,8 @@ import { PiiScrubberView } from './components/PiiScrubberView';
 import { draftToPlan, MedicationSchedule } from './components/MedicationSchedule';
 import { CaregiverSync } from './components/CaregiverSync';
 import { LocalAiCheck } from './components/LocalAiCheck';
+import { AiPrivacyPanel } from './components/AiPrivacyPanel';
+import { useLocalAiCheck } from './state/useLocalAiCheck';
 import {
   scrubPii,
   approveCloudProcessing,
@@ -65,7 +67,8 @@ export default function App() {
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
     [progress, setProgress] = useState<AiProgress | null>(null);
-  const [localCheckBusy, setLocalCheckBusy] = useState(false);
+  const localCheck = useLocalAiCheck();
+  const [requestedPolicy, setRequestedPolicy] = useState<AnalysisPolicy | null>(null);
   const [page, setPage] = useState<Page>(route),
     [pane, setPane] = useState<'source' | 'privacy'>(() =>
       location.hash === '#privacy' ? 'privacy' : 'source',
@@ -120,6 +123,7 @@ export default function App() {
     permitRef.current = null;
     setPermit(null);
     setPolicy('local-only');
+    setRequestedPolicy(null);
     setAnalysis(null);
     setError('');
     setRaw(text);
@@ -146,10 +150,22 @@ export default function App() {
   function review(checked: boolean) {
     if (permitRef.current) revokeCloudProcessing(permitRef.current);
     try {
-      const next = checked ? approveCloudProcessing(scrubbed, true) : null;
+      const next = checked
+        ? approveCloudProcessing(
+            scrubbed,
+            true,
+            requestedPolicy === 'cloud-first-with-consent' || policy === 'cloud-first-with-consent'
+              ? 'cloud-first'
+              : 'fallback',
+          )
+        : null;
       permitRef.current = next;
       setPermit(next);
       if (!next) setPolicy('local-only');
+      else if (requestedPolicy) {
+        setPolicy(requestedPolicy);
+        setRequestedPolicy(null);
+      }
       setError('');
     } catch {
       permitRef.current = null;
@@ -158,7 +174,33 @@ export default function App() {
       setError('Review the text and resolve its privacy warning before allowing cloud processing.');
     }
   }
+  function choosePrivacy(next: AnalysisPolicy) {
+    if (busy || localCheck.busy) return;
+    if (next === 'local-only') {
+      review(false);
+      setRequestedPolicy(null);
+      return;
+    }
+    if (isExtension()) {
+      setError('Cloud modes are available only in the web companion.');
+      navigate('privacy');
+      return;
+    }
+    if (!permit || (next === 'cloud-first-with-consent' && permit.scope !== 'cloud-first')) {
+      if (permit) review(false);
+      setRequestedPolicy(next);
+      navigate('privacy');
+      setError(
+        'To use this mode, review the masked text and explicitly allow cloud processing. Strict local remains on until you approve.',
+      );
+      return;
+    }
+    setPolicy(next);
+    setRequestedPolicy(null);
+    setError('');
+  }
   async function analyze() {
+    if (busy || localCheck.busy) return;
     const controller = new AbortController();
     let timedOut = false;
     let lastStage: AiProgress['stage'] = 'preparing-local';
@@ -258,26 +300,59 @@ export default function App() {
       : progress?.stage === 'checking-evidence'
         ? 'Checking source evidence'
         : 'Extracting instructions';
+  const runtimeStatus = busy
+    ? progressText
+    : localCheck.busy
+      ? localCheck.message
+      : localCheck.outcome === 'error'
+        ? 'Local AI check did not finish'
+        : analysis?.inferenceSource === 'cloud'
+          ? 'Last AI result · cloud'
+          : analysis?.inferenceSource === 'on-device'
+            ? 'Last AI result · on-device'
+            : localCheck.outcome === 'ready'
+              ? 'Local AI replied successfully'
+              : 'Local AI not checked yet';
+  const privacyPanel = (
+    <AiPrivacyPanel
+      policy={policy}
+      disabled={busy}
+      onSelect={choosePrivacy}
+      status={runtimeStatus}
+      check={localCheck}
+    />
+  );
   return (
     <WorkspaceLayout
       page={page}
       documentCount={raw.trim() ? 1 : 0}
       medicineCount={snapshot.medicines.length}
       onNew={requestNew}
+      privacyControls={privacyPanel}
     >
       <main id="main" className={`page-content page-${page}`} key={page}>
         <div className="prototype-callout">
           <span>RESEARCH</span>Fictional documents only · Not for medical decisions
         </div>
         {page === 'overview' && (
-          <Overview
-            raw={raw}
-            medicineCount={snapshot.medicines.length}
-            redactions={scrubbed.redactions.length}
-            onSample={requestSample}
-            onDocuments={() => navigate('documents')}
-            policyLabel={policy === 'local-only' ? 'On-device' : 'Hybrid'}
-          />
+          <>
+            <Overview
+              raw={raw}
+              medicineCount={snapshot.medicines.length}
+              redactions={scrubbed.redactions.length}
+              onSample={requestSample}
+              onDocuments={() => navigate('documents')}
+              policyLabel={
+                policy === 'local-only'
+                  ? 'Strict local'
+                  : policy === 'local-first-with-consent'
+                    ? 'Balanced'
+                    : 'Best quality'
+              }
+            />
+            <div className="mobile-privacy-panel">{privacyPanel}</div>
+            {firebaseConfigured() && <LocalAiCheck check={localCheck} disabled={busy} />}
+          </>
         )}
         {page === 'documents' && (
           <>
@@ -336,7 +411,15 @@ export default function App() {
                 </button>
               </div>
               <div className="preview-panel">
-                <PiiScrubberView document={scrubbed} reviewed={!!permit} onReviewed={review} />
+                <PiiScrubberView
+                  document={scrubbed}
+                  reviewed={!!permit}
+                  onReviewed={review}
+                  cloudFirst={
+                    requestedPolicy === 'cloud-first-with-consent' ||
+                    policy === 'cloud-first-with-consent'
+                  }
+                />
               </div>
             </div>
             {raw === sample && (
@@ -356,7 +439,7 @@ export default function App() {
               <p>
                 {typeof window !== 'undefined' && 'LanguageModel' in window
                   ? 'This browser exposes on-device AI. Model availability is checked when you extract.'
-                  : 'This browser has no supported on-device language model. Use manual entry, or explicitly allow reviewed text in Hybrid mode. Local photo scanning still works.'}
+                  : 'This browser has no supported on-device language model. Use manual entry, or review the cloud privacy choices. Local photo scanning still works.'}
               </p>
             </div>
             <section className="processing-bar" aria-labelledby="processing-title">
@@ -366,30 +449,44 @@ export default function App() {
                 </span>
                 <div>
                   <h2 id="processing-title">Your document. Your choice.</h2>
-                  <p>On-device mode never falls back to cloud AI.</p>
+                  <p>
+                    {policy === 'local-only'
+                      ? 'Strict local never falls back to cloud AI.'
+                      : policy === 'local-first-with-consent'
+                        ? 'Balanced tries on-device AI before the approved cloud fallback.'
+                        : 'Best quality tries cloud AI first, using only your approved text.'}
+                  </p>
                 </div>
               </div>
               <div className="mode-controls" role="group" aria-label="AI processing mode">
                 <button
                   aria-pressed={policy === 'local-only'}
-                  onClick={() => setPolicy('local-only')}
+                  onClick={() => choosePrivacy('local-only')}
                 >
                   <LockKeyhole size={15} aria-hidden="true" />
-                  On-device only
+                  Strict local
                 </button>
                 <button
                   disabled={!permit || isExtension()}
                   aria-pressed={policy === 'local-first-with-consent'}
                   aria-describedby="hybrid-help"
-                  onClick={() => setPolicy('local-first-with-consent')}
+                  onClick={() => choosePrivacy('local-first-with-consent')}
                 >
                   <Cloud size={16} aria-hidden="true" />
-                  Hybrid
+                  Balanced
+                </button>
+                <button
+                  disabled={!permit || isExtension() || busy || localCheck.busy}
+                  aria-pressed={policy === 'cloud-first-with-consent'}
+                  onClick={() => choosePrivacy('cloud-first-with-consent')}
+                >
+                  <Cloud size={16} aria-hidden="true" />
+                  Best quality
                 </button>
               </div>
               <button
                 className="button primary extract-button"
-                disabled={busy || localCheckBusy || !raw.trim() || !firebaseConfigured()}
+                disabled={busy || localCheck.busy || !raw.trim() || !firebaseConfigured()}
                 aria-describedby={!firebaseConfigured() ? 'ai-setup-help' : undefined}
                 onClick={() => void analyze()}
               >
@@ -405,7 +502,7 @@ export default function App() {
               <p className="mode-help" id="hybrid-help">
                 {permit
                   ? 'Cloud permission is limited to the text you reviewed.'
-                  : 'Hybrid mode requires reviewing the preview and explicitly allowing cloud processing.'}
+                  : 'Cloud modes require reviewing the preview and explicitly allowing cloud processing.'}
               </p>
               <span role="status" className="sr-only">
                 {busy ? progressText : ''}
@@ -426,7 +523,7 @@ export default function App() {
                 {error}
               </p>
             )}
-            {firebaseConfigured() && <LocalAiCheck disabled={busy} onBusy={setLocalCheckBusy} />}
+            {firebaseConfigured() && <LocalAiCheck disabled={busy} check={localCheck} />}
           </>
         )}
         {page === 'medicines' && (

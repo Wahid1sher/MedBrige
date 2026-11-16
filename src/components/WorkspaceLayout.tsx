@@ -39,8 +39,16 @@ interface Props {
   readonly documentCount: number;
   readonly medicineCount: number;
   readonly onNew: () => void;
+  readonly privacyControls: ReactNode;
 }
-export function WorkspaceLayout({ children, page, documentCount, medicineCount, onNew }: Props) {
+export function WorkspaceLayout({
+  children,
+  page,
+  documentCount,
+  medicineCount,
+  onNew,
+  privacyControls,
+}: Props) {
   const links = (mobile = false) =>
     navigation.map(({ id, label, icon: Icon }) => {
       const count = id === 'documents' ? documentCount : id === 'medicines' ? medicineCount : 0;
@@ -96,6 +104,7 @@ export function WorkspaceLayout({ children, page, documentCount, medicineCount, 
           <ArrowUpRight size={17} aria-hidden="true" />
         </a>
         <div className="sidebar-bottom">
+          {privacyControls}
           <a className="sidebar-privacy-link" href="#privacy" aria-label="Your privacy controls">
             <ShieldCheck size={20} aria-hidden="true" />
             <span>

@@ -52,6 +52,63 @@ function setup(
   return { service, calls };
 }
 describe('privacy-aware inference routing', () => {
+  it('requires explicit cloud permission for Best quality before starting any model', async () => {
+    const { service, calls } = setup();
+    await expect(
+      service.analyze({ document: scrubPii(quote), policy: 'cloud-first-with-consent' }),
+    ).rejects.toThrow(/permission/);
+    expect(calls).toHaveLength(0);
+  });
+  it('prefers cloud without waiting on local setup only when approved and online', async () => {
+    let prepared = false;
+    let preference: boolean | undefined;
+    const document = scrubPii(quote);
+    const service = createHybridAi({
+      engine: {
+        prepareLocal: async () => {
+          prepared = true;
+        },
+        generate: async (_prompt, allowed, _signal, preferCloud) => {
+          expect(allowed).toBe(true);
+          preference = preferCloud;
+          return { text: reply, source: 'cloud' };
+        },
+      },
+      connectivity: () => 'online-hint',
+      now: () => 0,
+    });
+    await expect(
+      service.analyze({
+        document,
+        policy: 'cloud-first-with-consent',
+        cloudPermit: approveCloudProcessing(document, true, 'cloud-first'),
+      }),
+    ).resolves.toMatchObject({ inferenceSource: 'cloud' });
+    expect(prepared).toBe(false);
+    expect(preference).toBe(true);
+  });
+  it('keeps Best quality on-device when offline', async () => {
+    const { service, calls } = setup({ offline: true });
+    const document = scrubPii(quote);
+    await service.analyze({
+      document,
+      policy: 'cloud-first-with-consent',
+      cloudPermit: approveCloudProcessing(document, true, 'cloud-first'),
+    });
+    expect(calls[0]!.allowCloud).toBe(false);
+  });
+  it('does not silently expand fallback-only permission into cloud-first processing', async () => {
+    const { service, calls } = setup();
+    const document = scrubPii(quote);
+    await expect(
+      service.analyze({
+        document,
+        policy: 'cloud-first-with-consent',
+        cloudPermit: approveCloudProcessing(document, true),
+      }),
+    ).rejects.toThrow(/fresh permission/);
+    expect(calls).toHaveLength(0);
+  });
   it('defaults to a strict local-only request even when online', async () => {
     const { service, calls } = setup();
     const result = await service.analyze({ document: scrubPii(quote), policy: 'local-only' });

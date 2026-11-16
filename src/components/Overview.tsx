@@ -307,6 +307,17 @@ export function Overview({
           </div>
         )}
       </section>
+      <aside className="discharge-research" aria-label="Why clearer discharge instructions matter">
+        <p>
+          In one hospital study, about <strong>1 in 5 patients</strong> had a care-related problem
+          after discharge. About <strong>2 in 3</strong> of those problems involved medicines.
+        </p>
+        <a href="https://pubmed.ncbi.nlm.nih.gov/12558354/" target="_blank" rel="noreferrer">
+          Forster et al. · Annals of Internal Medicine, 2003{' '}
+          <ArrowUpRight size={13} aria-hidden="true" />
+        </a>
+        <small>A finding from one study, not a prediction of your personal risk.</small>
+      </aside>
       {!example && <DailyCare />}
       <section className="sky-workspace" aria-label="Your workspace">
         <div className="workspace-heading">

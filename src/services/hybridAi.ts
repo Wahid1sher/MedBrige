@@ -8,6 +8,7 @@ import {
   type GenerativeModel,
 } from 'firebase/ai';
 import { getFirebaseServices } from './firebase';
+import { withAiRun } from './aiRunLock';
 import {
   assertCloudPermission,
   assertScrubbedDocument,
@@ -22,7 +23,7 @@ import {
 } from '../types/medication';
 
 export type Connectivity = MedicationAnalysis['connectivity'];
-export type AnalysisPolicy = 'local-only' | 'local-first-with-consent';
+export type AnalysisPolicy = 'local-only' | 'local-first-with-consent' | 'cloud-first-with-consent';
 export interface AnalysisRequest {
   readonly document: ScrubbedDocument;
   readonly policy: AnalysisPolicy;
@@ -40,7 +41,12 @@ export interface ModelReply {
 }
 export interface HybridEngine {
   prepareLocal(onProgress: (fraction: number) => void, signal?: AbortSignal): Promise<void>;
-  generate(prompt: string, allowCloud: boolean, signal?: AbortSignal): Promise<ModelReply>;
+  generate(
+    prompt: string,
+    allowCloud: boolean,
+    signal?: AbortSignal,
+    preferCloud?: boolean,
+  ): Promise<ModelReply>;
 }
 export interface HybridDependencies {
   readonly engine: HybridEngine;
@@ -246,121 +252,131 @@ export function splitSourceText(text: string, limit = 7500, overlap = 700): stri
 export function createHybridAi(dependencies: HybridDependencies) {
   return {
     async analyze(request: AnalysisRequest): Promise<MedicationAnalysis> {
-      const { document, policy, cloudPermit, signal, onProgress } = request;
-      cancelled(signal);
-      assertScrubbedDocument(document);
-      if (!document.text.trim())
-        throw new HybridAiError('EMPTY_DOCUMENT', 'Add document text first.');
-      // A ten-page intake is supported, but local models have small context windows.
-      // Do not silently truncate a long discharge packet or drop its final pages.
-      if (document.text.length > 200000)
-        throw new HybridAiError(
-          'CONTEXT_LIMIT',
-          'Use up to 200,000 characters per review. The document was not sent or shortened.',
-        );
-      const connectivity = dependencies.connectivity();
-      const allowCloud = policy === 'local-first-with-consent' && connectivity !== 'offline';
-      if (policy === 'local-first-with-consent') assertCloudPermission(document, cloudPermit);
-      const start = dependencies.now();
-      onProgress?.({ stage: 'preparing-local' });
-      try {
-        await abortable(
-          dependencies.engine.prepareLocal(
-            (fraction) => onProgress?.({ stage: 'preparing-local', fraction }),
-            signal,
-          ),
-          signal,
-        );
-      } catch (error) {
-        if (import.meta.env.DEV)
-          console.warn(
-            'On-device preparation:',
-            error instanceof Error ? error.message : 'unavailable',
-          );
-        if (!allowCloud) {
-          cancelled(signal);
-          throw new HybridAiError(
-            'LOCAL_UNAVAILABLE',
-            'The local model is unavailable. Document text was not sent to cloud AI. Use supported desktop Chrome and prepare its model first.',
-          );
-        }
-      }
-      cancelled(signal);
-      // Re-check after a potentially lengthy model download or revoked approval.
-      if (allowCloud) assertCloudPermission(document, cloudPermit);
-      const accepted: MedicationDraft[] = [];
-      const seen = new Set<string>();
-      let inferenceSource: 'on-device' | 'cloud' = 'on-device';
-      for (const section of splitSourceText(document.text)) {
+      return withAiRun(async () => {
+        const { document, policy, cloudPermit, signal, onProgress } = request;
         cancelled(signal);
-        if (allowCloud) assertCloudPermission(document, cloudPermit);
-        const cloudNow = allowCloud && dependencies.connectivity() !== 'offline';
-        onProgress?.({ stage: 'extracting' });
-        let result: ModelReply;
-        try {
-          result = await abortable(
-            dependencies.engine.generate(buildExtractionPrompt(section), cloudNow, signal),
-            signal,
-          );
-        } catch {
-          cancelled(signal);
+        assertScrubbedDocument(document);
+        if (!document.text.trim())
+          throw new HybridAiError('EMPTY_DOCUMENT', 'Add document text first.');
+        // A ten-page intake is supported, but local models have small context windows.
+        // Do not silently truncate a long discharge packet or drop its final pages.
+        if (document.text.length > 200000)
           throw new HybridAiError(
-            cloudNow ? 'AI_UNAVAILABLE' : 'LOCAL_UNAVAILABLE',
-            cloudNow
-              ? 'AI could not finish. Check the connection and Firebase/App Check setup.'
-              : 'The local model could not finish. No cloud fallback was allowed.',
+            'CONTEXT_LIMIT',
+            'Use up to 200,000 characters per review. The document was not sent or shortened.',
           );
-        }
+        const connectivity = dependencies.connectivity();
+        const allowCloud = policy !== 'local-only' && connectivity !== 'offline';
+        const cloudScope = policy === 'cloud-first-with-consent' ? 'cloud-first' : 'fallback';
+        if (policy !== 'local-only') assertCloudPermission(document, cloudPermit, cloudScope);
+        const start = dependencies.now();
+        onProgress?.({ stage: 'preparing-local' });
+        if (!(allowCloud && policy === 'cloud-first-with-consent'))
+          try {
+            await abortable(
+              dependencies.engine.prepareLocal(
+                (fraction) => onProgress?.({ stage: 'preparing-local', fraction }),
+                signal,
+              ),
+              signal,
+            );
+          } catch (error) {
+            if (import.meta.env.DEV)
+              console.warn(
+                'On-device preparation:',
+                error instanceof Error ? error.message : 'unavailable',
+              );
+            if (!allowCloud) {
+              cancelled(signal);
+              throw new HybridAiError(
+                'LOCAL_UNAVAILABLE',
+                'The local model is unavailable. Document text was not sent to cloud AI. Use supported desktop Chrome and prepare its model first.',
+              );
+            }
+          }
         cancelled(signal);
-        if (result.source === 'cloud' && !cloudNow)
-          throw new HybridAiError('UNEXPECTED_CLOUD', 'An unexpected cloud result was rejected.');
-        if (result.source !== 'cloud' && result.source !== 'on-device')
-          throw new HybridAiError(
-            'INVALID_RESPONSE',
-            'No verifiable inference source was reported.',
-          );
-        if (result.source === 'cloud') inferenceSource = 'cloud';
-        onProgress?.({ stage: 'checking-evidence' });
-        for (const entry of parseMedicationResponse(result.text, section)) {
-          const signature = JSON.stringify(medicationFields.map((key) => entry[key]));
-          if (seen.has(signature)) continue;
-          seen.add(signature);
-          accepted.push(entry);
-          if (accepted.length > 60)
+        // Re-check after a potentially lengthy model download or revoked approval.
+        if (allowCloud) assertCloudPermission(document, cloudPermit, cloudScope);
+        const accepted: MedicationDraft[] = [];
+        const seen = new Set<string>();
+        let inferenceSource: 'on-device' | 'cloud' = 'on-device';
+        for (const section of splitSourceText(document.text)) {
+          cancelled(signal);
+          if (allowCloud) assertCloudPermission(document, cloudPermit, cloudScope);
+          const cloudNow = allowCloud && dependencies.connectivity() !== 'offline';
+          onProgress?.({ stage: 'extracting' });
+          let result: ModelReply;
+          try {
+            result = await abortable(
+              dependencies.engine.generate(
+                buildExtractionPrompt(section),
+                cloudNow,
+                signal,
+                cloudNow && policy === 'cloud-first-with-consent',
+              ),
+              signal,
+            );
+          } catch {
+            cancelled(signal);
+            throw new HybridAiError(
+              cloudNow ? 'AI_UNAVAILABLE' : 'LOCAL_UNAVAILABLE',
+              cloudNow
+                ? 'AI could not finish. Check the connection and Firebase/App Check setup.'
+                : 'The local model could not finish. No cloud fallback was allowed.',
+            );
+          }
+          cancelled(signal);
+          if (result.source === 'cloud' && !cloudNow)
+            throw new HybridAiError('UNEXPECTED_CLOUD', 'An unexpected cloud result was rejected.');
+          if (result.source !== 'cloud' && result.source !== 'on-device')
             throw new HybridAiError(
               'INVALID_RESPONSE',
-              'More than 60 distinct entries were found. Split this document for careful review.',
+              'No verifiable inference source was reported.',
             );
+          if (result.source === 'cloud') inferenceSource = 'cloud';
+          onProgress?.({ stage: 'checking-evidence' });
+          for (const entry of parseMedicationResponse(result.text, section)) {
+            const signature = JSON.stringify(medicationFields.map((key) => entry[key]));
+            if (seen.has(signature)) continue;
+            seen.add(signature);
+            accepted.push(entry);
+            if (accepted.length > 60)
+              throw new HybridAiError(
+                'INVALID_RESPONSE',
+                'More than 60 distinct entries were found. Split this document for careful review.',
+              );
+          }
         }
-      }
-      const medications = Object.freeze(accepted);
-      return Object.freeze({
-        documentId: document.id,
-        medications,
-        inferenceSource,
-        connectivity,
-        elapsedMs: Math.max(0, dependencies.now() - start),
-        reviewRequired: true as const,
-        interactionScreening: Object.freeze({
-          status: 'not-performed' as const,
-          explanation:
-            'No clinically validated interaction service is connected. This extraction cannot determine whether medicines are safe together.',
-        }),
+        const medications = Object.freeze(accepted);
+        return Object.freeze({
+          documentId: document.id,
+          medications,
+          inferenceSource,
+          connectivity,
+          elapsedMs: Math.max(0, dependencies.now() - start),
+          reviewRequired: true as const,
+          interactionScreening: Object.freeze({
+            status: 'not-performed' as const,
+            explanation:
+              'No clinically validated interaction service is connected. This extraction cannot determine whether medicines are safe together.',
+          }),
+        });
       });
     },
   };
 }
 
 export class FirebaseHybridEngine implements HybridEngine {
-  private readonly models = new Map<boolean, GenerativeModel>();
-  private readonly requests = new WeakMap<AbortSignal, Map<boolean, GenerativeModel>>();
-  private model(allowCloud: boolean, signal?: AbortSignal): GenerativeModel {
+  private readonly models = new Map<string, GenerativeModel>();
+  private readonly requests = new WeakMap<AbortSignal, Map<string, GenerativeModel>>();
+  private model(allowCloud: boolean, signal?: AbortSignal, preferCloud = false): GenerativeModel {
     let models = signal ? this.requests.get(signal) : this.models;
     if (!models) {
       models = new Map();
       this.requests.set(signal!, models);
     }
-    const cached = models.get(allowCloud);
+    const key = !allowCloud ? 'local' : preferCloud ? 'cloud-first' : 'local-first';
+    const cached = models.get(key);
     if (cached) return cached;
     const { app } = getFirebaseServices({ cloud: allowCloud });
     const field = (nullable = true) =>
@@ -380,7 +396,11 @@ export class FirebaseHybridEngine implements HybridEngine {
       },
     });
     const model = getGenerativeModel(getAI(app, { backend: new GoogleAIBackend() }), {
-      mode: allowCloud ? InferenceMode.PREFER_ON_DEVICE : InferenceMode.ONLY_ON_DEVICE,
+      mode: !allowCloud
+        ? InferenceMode.ONLY_ON_DEVICE
+        : preferCloud
+          ? InferenceMode.PREFER_IN_CLOUD
+          : InferenceMode.PREFER_ON_DEVICE,
       inCloudParams: {
         model: import.meta.env.VITE_FIREBASE_CLOUD_MODEL || 'gemini-3.5-flash-lite',
         generationConfig: {
@@ -401,7 +421,7 @@ export class FirebaseHybridEngine implements HybridEngine {
         promptOptions: { responseConstraint: localMedicationSchema, ...(signal ? { signal } : {}) },
       },
     });
-    models.set(allowCloud, model);
+    models.set(key, model);
     return model;
   }
   async prepareLocal(onProgress: (fraction: number) => void, signal?: AbortSignal): Promise<void> {
@@ -409,9 +429,14 @@ export class FirebaseHybridEngine implements HybridEngine {
       throw new Error('Local model unavailable');
     await this.model(false, signal).initializeDeviceModel(onProgress);
   }
-  async generate(prompt: string, allowCloud: boolean, signal?: AbortSignal): Promise<ModelReply> {
+  async generate(
+    prompt: string,
+    allowCloud: boolean,
+    signal?: AbortSignal,
+    preferCloud = false,
+  ): Promise<ModelReply> {
     cancelled(signal);
-    const result = await this.model(allowCloud, signal).generateContent(
+    const result = await this.model(allowCloud, signal, preferCloud).generateContent(
       prompt,
       signal ? { signal } : undefined,
     );
@@ -483,39 +508,107 @@ export async function checkLocalAi(
   signal: AbortSignal,
   onStage: (stage: string) => void,
 ): Promise<void> {
-  if (typeof window === 'undefined' || !('LanguageModel' in window))
-    throw new Error('Local AI is not exposed in this browser. Open MedBrige in desktop Chrome.');
-  const { app } = getFirebaseServices({ cloud: false });
-  const promptOptions: { responseConstraint?: object; signal: AbortSignal } = { signal };
-  const model = getGenerativeModel(getAI(app, { backend: new GoogleAIBackend() }), {
-    mode: InferenceMode.ONLY_ON_DEVICE,
-    onDeviceParams: {
-      createOptions: {
-        expectedInputs: [{ type: 'text', languages: ['en'] }],
-        expectedOutputs: [{ type: 'text', languages: ['en'] }],
-        signal,
-      },
-      promptOptions,
-    },
+  return withAiRun(async () => {
+    const lifetime = new AbortController();
+    const abort = () => lifetime.abort();
+    if (signal.aborted) lifetime.abort();
+    else signal.addEventListener('abort', abort, { once: true });
+    const localSignal = lifetime.signal;
+    let refreshSetup = () => {};
+    let lastDownload = -1;
+    async function phase<T>(task: () => Promise<T>, ms: number, label: string): Promise<T> {
+      let expired = false;
+      let hardLimit = false;
+      const expire = () => {
+        expired = true;
+        lifetime.abort();
+      };
+      let timer = setTimeout(expire, ms);
+      if (label === 'Model setup')
+        refreshSetup = () => {
+          clearTimeout(timer);
+          timer = setTimeout(expire, ms);
+        };
+      const hardTimer =
+        label === 'Model setup'
+          ? setTimeout(() => {
+              hardLimit = true;
+              expire();
+            }, 30 * 60000)
+          : undefined;
+      try {
+        return await abortable(task(), localSignal);
+      } catch (error) {
+        if (expired)
+          throw new Error(
+            `${hardLimit ? 'Model download reached the 30-minute setup limit' : label === 'Model setup' ? 'Model setup showed no new progress for 120 seconds' : 'Local reply did not finish within 90 seconds'}. No document text was used and cloud fallback was off. Check Chrome’s model download, close other AI tabs, then retry.`,
+          );
+        throw error;
+      } finally {
+        clearTimeout(timer);
+        clearTimeout(hardTimer);
+        if (label === 'Model setup') refreshSetup = () => {};
+      }
+    }
+    try {
+      cancelled(localSignal);
+      if (typeof window === 'undefined' || !('LanguageModel' in window))
+        throw new Error(
+          'Local AI is not exposed in this browser. Open MedBrige in desktop Chrome.',
+        );
+      const { app } = getFirebaseServices({ cloud: false });
+      const promptOptions: { responseConstraint?: object; signal: AbortSignal } = {
+        signal: localSignal,
+      };
+      const model = getGenerativeModel(getAI(app, { backend: new GoogleAIBackend() }), {
+        mode: InferenceMode.ONLY_ON_DEVICE,
+        onDeviceParams: {
+          createOptions: {
+            expectedInputs: [{ type: 'text', languages: ['en'] }],
+            expectedOutputs: [{ type: 'text', languages: ['en'] }],
+            signal: localSignal,
+          },
+          promptOptions,
+        },
+      });
+      onStage('Checking model setup');
+      await phase(
+        () =>
+          model.initializeDeviceModel((fraction) => {
+            if (Number.isFinite(fraction) && fraction > lastDownload) {
+              lastDownload = fraction;
+              refreshSetup();
+            }
+            onStage(`Downloading model · ${Math.round(Math.min(1, Math.max(0, fraction)) * 100)}%`);
+          }),
+        120000,
+        'Model setup',
+      );
+      cancelled(localSignal);
+      onStage('Waiting for a short local reply');
+      await phase(
+        async () => {
+          const result = await model.generateContentStream('Reply with exactly the word OK.', {
+            signal: localSignal,
+          });
+          // Readiness needs the first real text, not an unbounded end-of-turn wait.
+          // The SDK also aggregates a response; handle its cancellation when we stop early.
+          void result.response.catch(() => {});
+          for await (const chunk of result.stream) {
+            if (chunk.inferenceSource !== InferenceSource.ON_DEVICE)
+              throw new Error('The local model did not return verifiable on-device provenance.');
+            if (chunk.text().trim()) return;
+          }
+          throw new Error('The local model finished without returning text.');
+        },
+        90000,
+        'Local reply',
+      );
+    } finally {
+      signal.removeEventListener('abort', abort);
+      lifetime.abort();
+    }
   });
-  onStage('Checking model setup');
-  await abortable(
-    model.initializeDeviceModel((fraction) =>
-      onStage(`Preparing model · ${Math.round(fraction * 100)}%`),
-    ),
-    signal,
-  );
-  cancelled(signal);
-  onStage('Waiting for a short local reply');
-  const result = await abortable(
-    model.generateContent('Reply with exactly the word OK.', { signal }),
-    signal,
-  );
-  if (
-    result.response.inferenceSource !== InferenceSource.ON_DEVICE ||
-    !result.response.text().trim()
-  )
-    throw new Error('The local model did not return a verifiable reply.');
 }
 let defaultService: ReturnType<typeof createHybridAi> | undefined;
 export const analyzeDischarge = (request: AnalysisRequest) => {

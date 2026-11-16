@@ -4,8 +4,9 @@ interface Props {
   readonly document: ScrubbedDocument;
   readonly reviewed: boolean;
   readonly onReviewed: (value: boolean) => void;
+  readonly cloudFirst?: boolean;
 }
-export function PiiScrubberView({ document, reviewed, onReviewed }: Props) {
+export function PiiScrubberView({ document, reviewed, onReviewed, cloudFirst = false }: Props) {
   const categories = new Set(document.redactions.flatMap((r) => r.categories));
   return (
     <section className="card privacy-panel">
@@ -87,7 +88,10 @@ export function PiiScrubberView({ document, reviewed, onReviewed }: Props) {
         <span>
           <strong>Allow this reviewed text in the cloud</strong>
           <span>
-            Only if local AI is unavailable. Changing the document clears this permission.
+            {cloudFirst
+              ? 'Best quality sends this reviewed text to cloud AI first. Photos stay on this device.'
+              : 'Balanced tries local AI first and permits cloud fallback.'}{' '}
+            Changing the document clears this permission.
           </span>
         </span>
         <Cloud size={18} aria-hidden="true" />

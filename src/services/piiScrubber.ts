@@ -26,6 +26,7 @@ export interface CloudPermit {
   readonly [permitBrand]: true;
   readonly documentId: string;
   readonly expiresAt: number;
+  readonly scope: 'fallback' | 'cloud-first';
 }
 export interface ScrubOptions {
   readonly knownPatientNames?: readonly string[];
@@ -38,7 +39,10 @@ interface Candidate {
   method: DetectionMethod;
 }
 const issued = new WeakSet<object>();
-const permits = new WeakMap<object, { document: ScrubbedDocument; expiresAt: number }>();
+const permits = new WeakMap<
+  object,
+  { document: ScrubbedDocument; expiresAt: number; scope: CloudPermit['scope'] }
+>();
 const LIMIT = 200_000;
 const REVIEW_NOTICE =
   'Automated redaction can miss identifiers. Check every line before sharing. This is not a guarantee of anonymity or HIPAA compliance.';
@@ -228,7 +232,11 @@ export function assertScrubbedDocument(document: ScrubbedDocument): void {
 }
 
 /** Call only after the person has reviewed this exact preview. Never persist it. */
-export function approveCloudProcessing(document: ScrubbedDocument, reviewed: boolean): CloudPermit {
+export function approveCloudProcessing(
+  document: ScrubbedDocument,
+  reviewed: boolean,
+  scope: CloudPermit['scope'] = 'fallback',
+): CloudPermit {
   assertScrubbedDocument(document);
   if (!reviewed)
     throw new PrivacyError(
@@ -238,8 +246,8 @@ export function approveCloudProcessing(document: ScrubbedDocument, reviewed: boo
   if (document.cloudBlockReasons.length)
     throw new PrivacyError('BLOCKED_TEXT', document.cloudBlockReasons.join(' '));
   const expiresAt = Date.now() + 10 * 60 * 1000;
-  const permit = Object.freeze({ documentId: document.id, expiresAt }) as CloudPermit;
-  permits.set(permit, { document, expiresAt });
+  const permit = Object.freeze({ documentId: document.id, expiresAt, scope }) as CloudPermit;
+  permits.set(permit, { document, expiresAt, scope });
   return permit;
 }
 export function revokeCloudProcessing(permit: CloudPermit): void {
@@ -249,6 +257,7 @@ export function revokeCloudProcessing(permit: CloudPermit): void {
 export function assertCloudPermission(
   document: ScrubbedDocument,
   permit: CloudPermit | undefined,
+  scope: CloudPermit['scope'] = 'fallback',
 ): void {
   assertScrubbedDocument(document);
   const approval = permit && permits.get(permit);
@@ -261,6 +270,11 @@ export function assertCloudPermission(
     permits.delete(permit!);
     throw new PrivacyError('APPROVAL_EXPIRED', 'Cloud permission expired. Review this text again.');
   }
+  if (scope === 'cloud-first' && approval.scope !== 'cloud-first')
+    throw new PrivacyError(
+      'INVALID_APPROVAL',
+      'Best quality requires fresh permission to send reviewed text to cloud AI first.',
+    );
   if (document.cloudBlockReasons.length)
     throw new PrivacyError('BLOCKED_TEXT', 'This text still has blocked privacy risks.');
 }
