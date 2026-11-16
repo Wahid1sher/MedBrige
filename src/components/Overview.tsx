@@ -133,7 +133,7 @@ export function Overview({
           <div className="sky-greeting">
             {example ? 'A little practice. A calmer day.' : 'A little support for what’s next.'}
           </div>
-          <h1>
+          <h1 data-tour="day-heading">
             {example ? (
               <>
                 {taken.length} of 5 doses

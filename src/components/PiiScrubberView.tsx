@@ -22,7 +22,7 @@ export function PiiScrubberView({ document, reviewed, onReviewed, cloudFirst = f
       <p className="supporting">
         Common identifiers are masked here, before AI receives your document text.
       </p>
-      <div className="scrub-summary" role="status">
+      <div className="scrub-summary" role="status" data-tour="redaction">
         <div className="scrub-count">{String(document.redactions.length).padStart(2, '0')}</div>
         <div>
           <strong>

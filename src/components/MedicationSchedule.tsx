@@ -249,7 +249,7 @@ export function MedicationSchedule({
   return (
     <>
       <section className="card medicine-workspace">
-        <div className="card-heading">
+        <div className="card-heading" data-tour="medicine-heading">
           <div>
             <span className="section-kicker">SOURCE → REVIEW → YOUR DAY</span>
             <h2>Your medicine review</h2>

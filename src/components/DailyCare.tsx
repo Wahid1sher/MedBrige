@@ -22,7 +22,7 @@ export function DailyCare() {
     next = entries.find((e) => e.status === 'pending' && e.time >= current);
   return (
     <section className="card real-day" id="day-plan">
-      <div className="card-heading">
+      <div className="card-heading" data-tour="daily-heading">
         <div>
           <span className="section-kicker">YOUR REVIEWED PLAN</span>
           <h2>

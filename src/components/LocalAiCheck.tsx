@@ -20,7 +20,7 @@ export function LocalAiCheck({
           <span className="check-eyebrow">
             <Cpu size={16} aria-hidden="true" /> ON YOUR DEVICE
           </span>
-          <h2>Having trouble with local AI?</h2>
+          <h2 data-tour="local-check">Having trouble with local AI?</h2>
           <p>
             Test a short reply first. This uses no document text and cannot fall back to the cloud.
           </p>

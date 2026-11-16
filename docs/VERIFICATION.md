@@ -2,7 +2,7 @@
 
 ## Passed automated checks
 
-- 57 Vitest service tests. This includes cancellation of an engine that ignores AbortSignal, native model cancellation and retry isolation, probe provenance, rejection of missing dose units/forms, retention of route/duration/status, exact decimal evidence checks, consent revocation between sections, strict private routing, encrypted round trips, wrong passphrases, tampering, schedule limits and handoff filtering. Added regressions cover progressing downloads, separate reply deadlines, the first verified streamed token, competing jobs and cloud-first consent scope.
+- 62 Vitest service tests. This includes cancellation of an engine that ignores AbortSignal, native model cancellation and retry isolation, probe provenance, rejection of missing dose units/forms, retention of route/duration/status, exact decimal evidence checks, consent revocation between sections, strict private routing, encrypted round trips, wrong passphrases, tampering, schedule limits and handoff filtering. Added regressions cover progressing downloads, separate reply deadlines, the first verified streamed token, competing jobs, cloud-first consent scope, tour placement and blocked tour-preference storage.
 - Actual local OCR integration: synthetic image read with 95% reported confidence; expected name, MRN, 0.5 mg decimal and second medicine matched.
 - TypeScript, production PWA build and MV3 extension build.
 
@@ -50,3 +50,12 @@ All test documents are synthetic. Service-engine mocks are not represented as re
 - Setup download progress was observed after the user enabled Chrome's Gemma 4 preview flag and restarted. A later plain short reply attempt still reached its 90-second deadline. This is documented as a failed preview attempt, not a successful Nano 4 run.
 - Readiness now checks the first SDK-provenanced streamed text and cancels the remainder, so it does not require an unlimited end-of-turn wait. This behavior is regression-tested; real preview success must be verified separately.
 - Responsive DOM measurements passed at 320px, 375px and 812px landscape: content width equaled viewport content width. Native phone testing remains separate.
+
+## Simplified menu and guided tour — November 16, 2026
+
+- Reduced the side menu to the four workspace destinations, Add document, a collapsed Privacy row and Take a tour. All privacy modes and diagnostics remain accessible by expanding Privacy. The phone header has a labeled tour button.
+- First-visit onboarding opened on a new empty home screen. All 12 tour steps were exercised on desktop and at 375 × 812. The guide navigated through Documents, private preview, Medicines, Today and Care circle using the real UI without running AI or granting permission.
+- Back and arrow-key step navigation passed. Tab from the final action cycled back to Skip, keeping focus in the dialog. The application behind the tour is inert while the tour is open, and that restriction was removed after closing.
+- Finish returned to the original route. A separate replay began from `#privacy`; pressing Escape returned there and preserved the exact synthetic document text. Only the tour preference was stored. Replaying remained available after completion.
+- Actual card bounds passed at 320 × 740 (296 × 427 card inside the viewport) and 812 × 375 landscape (356 × 343 card inside the viewport). Temporary viewport overrides were reset. Reduced-motion CSS disables the tour entrance and progress animations.
+- Screenshots: `guided-tour-desktop.png`, `guided-tour-mobile.png`. No real patient content appears in these artifacts.

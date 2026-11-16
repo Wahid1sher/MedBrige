@@ -22,8 +22,9 @@ interface Props {
   readonly onSample: () => void;
   readonly compact?: boolean;
   readonly onOpenEditor?: () => void;
+  readonly onPendingChange?: (pending: boolean) => void;
 }
-export function DischargeUploader({ value, onChange, onSample }: Props) {
+export function DischargeUploader({ value, onChange, onSample, onPendingChange }: Props) {
   const input = useRef<HTMLInputElement>(null),
     nativeCamera = useRef<HTMLInputElement>(null),
     pending = useRef<AbortController | null>(null),
@@ -52,6 +53,10 @@ export function DischargeUploader({ value, onChange, onSample }: Props) {
     },
     [preview],
   );
+  useEffect(() => {
+    onPendingChange?.(busy || camera || !!file);
+    return () => onPendingChange?.(false);
+  }, [busy, camera, file, onPendingChange]);
   async function scan(selected: File, angle = 0) {
     if (busy) return;
     const id = ++version.current,
@@ -126,7 +131,7 @@ export function DischargeUploader({ value, onChange, onSample }: Props) {
       <p className="supporting">
         Scan a photo, read a PDF or paste the original words. Photos are never sent to cloud AI.
       </p>
-      <div className="intake-actions">
+      <div className="intake-actions" data-tour="capture">
         <button className="button secondary" disabled={busy} onClick={() => input.current?.click()}>
           <Upload size={17} />
           Upload file
@@ -264,6 +269,7 @@ export function DischargeUploader({ value, onChange, onSample }: Props) {
         <span>{value.length.toLocaleString()} / 200,000</span>
       </div>
       <textarea
+        data-tour="source-text"
         id="raw-document"
         value={value}
         maxLength={200000}

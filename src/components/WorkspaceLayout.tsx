@@ -7,7 +7,8 @@ import {
   Plus,
   LockKeyhole,
   ArrowUpRight,
-  ShieldCheck,
+  CircleHelp,
+  ChevronDown,
 } from 'lucide-react';
 export type Page = 'overview' | 'documents' | 'medicines' | 'caregivers';
 const navigation = [
@@ -40,6 +41,9 @@ interface Props {
   readonly medicineCount: number;
   readonly onNew: () => void;
   readonly privacyControls: ReactNode;
+  readonly privacyLabel: string;
+  readonly onTour: () => void;
+  readonly tourDisabled: boolean;
 }
 export function WorkspaceLayout({
   children,
@@ -48,6 +52,9 @@ export function WorkspaceLayout({
   medicineCount,
   onNew,
   privacyControls,
+  privacyLabel,
+  onTour,
+  tourDisabled,
 }: Props) {
   const links = (mobile = false) =>
     navigation.map(({ id, label, icon: Icon }) => {
@@ -95,7 +102,9 @@ export function WorkspaceLayout({
         <div className="sidebar-section-heading">
           <p className="nav-label">YOUR SPACE</p>
         </div>
-        <nav aria-label="Workspace">{links()}</nav>
+        <nav aria-label="Workspace" data-tour="workspace-nav">
+          {links()}
+        </nav>
         <a className="sidebar-add" href="#documents">
           <span>
             <Plus size={18} aria-hidden="true" />
@@ -104,15 +113,25 @@ export function WorkspaceLayout({
           <ArrowUpRight size={17} aria-hidden="true" />
         </a>
         <div className="sidebar-bottom">
-          {privacyControls}
-          <a className="sidebar-privacy-link" href="#privacy" aria-label="Your privacy controls">
-            <ShieldCheck size={20} aria-hidden="true" />
-            <span>
-              <strong>Private by choice</strong>
-              <small>Review your privacy</small>
-            </span>
+          <details className="sidebar-settings">
+            <summary>
+              <LockKeyhole size={17} aria-hidden="true" />
+              <span>Privacy</span>
+              <small>{privacyLabel}</small>
+              <ChevronDown size={14} aria-hidden="true" />
+            </summary>
+            <div className="sidebar-settings-body">{privacyControls}</div>
+          </details>
+          <button
+            className="sidebar-tour"
+            data-tour="tour-launcher"
+            onClick={onTour}
+            disabled={tourDisabled}
+          >
+            <CircleHelp size={18} aria-hidden="true" />
+            <span>Take a tour</span>
             <ArrowUpRight size={15} aria-hidden="true" />
-          </a>
+          </button>
           <div className="sidebar-foot">
             <span>
               <i />
@@ -136,6 +155,16 @@ export function WorkspaceLayout({
             <strong>{navigation.find((item) => item.id === page)?.label}</strong>
           </div>
           <div className="header-actions">
+            <button
+              className="header-tour"
+              data-tour="tour-launcher"
+              onClick={onTour}
+              disabled={tourDisabled}
+              aria-label="Take a tour"
+            >
+              <CircleHelp size={18} aria-hidden="true" />
+              <span>Take a tour</span>
+            </button>
             <span className="session-badge">
               <LockKeyhole size={13} aria-hidden="true" />
               Session only
@@ -152,7 +181,7 @@ export function WorkspaceLayout({
         </header>
         {children}
       </div>
-      <nav className="mobile-nav" aria-label="Mobile workspace">
+      <nav className="mobile-nav" aria-label="Mobile workspace" data-tour="workspace-nav">
         {links(true)}
       </nav>
     </div>

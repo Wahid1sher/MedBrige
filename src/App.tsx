@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowRight,
   LockKeyhole,
@@ -20,6 +20,8 @@ import { CaregiverSync } from './components/CaregiverSync';
 import { LocalAiCheck } from './components/LocalAiCheck';
 import { AiPrivacyPanel } from './components/AiPrivacyPanel';
 import { useLocalAiCheck } from './state/useLocalAiCheck';
+import { AppTour } from './components/AppTour';
+import { rememberTour, tourHasBeenSeen, type TourRoute } from './services/appTour';
 import {
   scrubPii,
   approveCloudProcessing,
@@ -68,6 +70,12 @@ export default function App() {
     [error, setError] = useState(''),
     [progress, setProgress] = useState<AiProgress | null>(null);
   const localCheck = useLocalAiCheck();
+  const [tourOpen, setTourOpen] = useState(false);
+  const [intakePending, setIntakePending] = useState(false);
+  const tourOrigin = useRef<{ hash: string; scroll: number; focus: HTMLElement | null } | null>(
+    null,
+  );
+  const autoTourOffered = useRef(false);
   const [requestedPolicy, setRequestedPolicy] = useState<AnalysisPolicy | null>(null);
   const [page, setPage] = useState<Page>(route),
     [pane, setPane] = useState<'source' | 'privacy'>(() =>
@@ -108,6 +116,58 @@ export default function App() {
     location.hash = to;
     window.scrollTo({ top: 0 });
   }
+  const navigateTour = useCallback((to: TourRoute) => {
+    history.replaceState(null, '', `#${to}`);
+    setPage(to === 'privacy' ? 'documents' : to);
+    setPane(to === 'privacy' ? 'privacy' : 'source');
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, []);
+  const tourDisabled = busy || localCheck.busy || intakePending || dialogAction !== null;
+  function startTour() {
+    if (tourDisabled || tourOpen || document.querySelector('[aria-modal="true"], dialog[open]'))
+      return;
+    tourOrigin.current = {
+      hash: location.hash || '#overview',
+      scroll: window.scrollY,
+      focus: document.activeElement instanceof HTMLElement ? document.activeElement : null,
+    };
+    setTourOpen(true);
+  }
+  function closeTour(completed: boolean) {
+    rememberTour(completed);
+    setTourOpen(false);
+    const origin = tourOrigin.current;
+    tourOrigin.current = null;
+    if (origin) {
+      history.replaceState(null, '', origin.hash);
+      setPage(route());
+      setPane(origin.hash === '#privacy' ? 'privacy' : 'source');
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: origin.scroll, behavior: 'instant' });
+        if (origin.focus?.isConnected && origin.focus !== document.body)
+          origin.focus.focus({ preventScroll: true });
+        else document.querySelector<HTMLElement>('.header-tour')?.focus({ preventScroll: true });
+      });
+    }
+  }
+  useEffect(() => {
+    if (
+      autoTourOffered.current ||
+      tourOpen ||
+      tourDisabled ||
+      page !== 'overview' ||
+      raw.trim() ||
+      snapshot.medicines.length ||
+      snapshot.questions.length ||
+      tourHasBeenSeen()
+    )
+      return;
+    const timer = setTimeout(() => {
+      autoTourOffered.current = true;
+      startTour();
+    }, 900);
+    return () => clearTimeout(timer);
+  }, [tourOpen, tourDisabled, page, raw, snapshot.medicines.length, snapshot.questions.length]);
   function changeText(text: string) {
     if (text.length > 200000) {
       setError(
@@ -329,6 +389,15 @@ export default function App() {
       medicineCount={snapshot.medicines.length}
       onNew={requestNew}
       privacyControls={privacyPanel}
+      privacyLabel={
+        policy === 'local-only'
+          ? 'Strict local'
+          : policy === 'local-first-with-consent'
+            ? 'Balanced'
+            : 'Best quality'
+      }
+      onTour={startTour}
+      tourDisabled={tourDisabled}
     >
       <main id="main" className={`page-content page-${page}`} key={page}>
         <div className="prototype-callout">
@@ -398,6 +467,7 @@ export default function App() {
                   value={raw}
                   onChange={changeText}
                   onSample={requestSample}
+                  onPendingChange={setIntakePending}
                 />
                 <button
                   className="mobile-continue button dark"
@@ -458,7 +528,12 @@ export default function App() {
                   </p>
                 </div>
               </div>
-              <div className="mode-controls" role="group" aria-label="AI processing mode">
+              <div
+                className="mode-controls"
+                role="group"
+                aria-label="AI processing mode"
+                data-tour="processing"
+              >
                 <button
                   aria-pressed={policy === 'local-only'}
                   onClick={() => choosePrivacy('local-only')}
@@ -589,6 +664,7 @@ export default function App() {
           navigate('documents');
         }}
       />
+      {tourOpen && <AppTour onNavigate={navigateTour} onClose={closeTour} />}
     </WorkspaceLayout>
   );
 }

@@ -23,3 +23,4 @@ if (
 import './sky.css';
 import './identity.css';
 import './complete.css';
+import './tour.css';

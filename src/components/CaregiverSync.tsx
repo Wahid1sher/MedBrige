@@ -88,7 +88,7 @@ export function CaregiverSync({ onRestore }: { onRestore: () => void }) {
   return (
     <>
       <section className="card handoff-card">
-        <div className="card-heading">
+        <div className="card-heading" data-tour="handoff-heading">
           <div>
             <span className="section-kicker">A PRIVATE HANDOFF</span>
             <h2>Care travels. Your photos don’t.</h2>
@@ -260,7 +260,7 @@ export function CaregiverSync({ onRestore }: { onRestore: () => void }) {
         )}
       </section>
       <section className="card questions-card">
-        <div className="card-heading">
+        <div className="card-heading" data-tour="questions-heading">
           <div>
             <span className="section-kicker">BETTER CONVERSATIONS</span>
             <h2>Questions for your care team</h2>
