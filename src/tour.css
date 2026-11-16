@@ -140,6 +140,13 @@
   isolation: isolate;
   overscroll-behavior: contain;
 }
+/* Room to bring even the final page section above the tour card. */
+body[data-tour-active]::after {
+  content: '';
+  display: block;
+  height: min(440px, 55dvh);
+  pointer-events: none;
+}
 .tour-shade {
   position: absolute;
   inset: 0;
@@ -158,7 +165,9 @@
   position: fixed;
   width: min(356px, calc(100vw - 24px));
   max-height: calc(100dvh - 24px);
-  overflow-y: auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   overscroll-behavior: contain;
   padding: 20px;
   border: 1px solid #ffffff20;
@@ -171,6 +180,23 @@
   animation: tour-arrive 180ms ease-out;
   scrollbar-width: thin;
   scrollbar-color: #7890b0 transparent;
+}
+.tour-copy {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  flex: 0 1 auto;
+}
+.tour-copy:focus-visible {
+  outline: 2px solid #ffda82;
+  outline-offset: -2px;
+  border-radius: 5px;
+}
+.tour-topline,
+.tour-progress,
+.tour-actions {
+  flex-shrink: 0;
 }
 .tour-popover::before {
   content: '';
@@ -380,5 +406,59 @@
   }
   .tour-progress > span {
     transition: none;
+  }
+}
+/* Shorter explanations, compact spacing, and always-visible controls on phones/tablets. */
+.tour-popover.is-compact {
+  width: min(320px, calc(100vw - 24px));
+  max-height: min(320px, calc(100dvh - 180px));
+  padding: 12px 15px;
+  border-radius: 16px;
+}
+.tour-popover.is-compact .tour-topline {
+  margin-top: -7px;
+}
+.tour-popover.is-compact .tour-topline > span {
+  font-size: 12px;
+}
+.tour-popover.is-compact .tour-skip {
+  font-size: 11px;
+}
+.tour-popover.is-compact .tour-progress {
+  margin: 0 0 10px;
+  height: 2px;
+}
+.tour-popover.is-compact .tour-chapter {
+  display: none;
+}
+.tour-popover.is-compact h2 {
+  font-size: 18px;
+  line-height: 1.3;
+  letter-spacing: -0.4px;
+  margin: 0 0 8px;
+}
+.tour-popover.is-compact p {
+  font-size: 14px;
+  line-height: 1.5;
+}
+.tour-popover.is-compact .tour-note {
+  font-size: 11.5px;
+  line-height: 1.5;
+  margin-top: 10px;
+  padding: 7px 9px;
+}
+.tour-popover.is-compact .tour-actions {
+  margin-top: 12px;
+}
+.tour-popover.is-compact .tour-actions button {
+  font-size: 12px;
+  padding: 8px 12px;
+}
+@media (max-height: 520px) {
+  .tour-popover.is-compact {
+    max-height: calc(100dvh - 160px);
+  }
+  .tour-popover.is-compact h2 {
+    font-size: 17px;
   }
 }

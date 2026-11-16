@@ -2,7 +2,7 @@
 
 ## Passed automated checks
 
-- 62 Vitest service tests. This includes cancellation of an engine that ignores AbortSignal, native model cancellation and retry isolation, probe provenance, rejection of missing dose units/forms, retention of route/duration/status, exact decimal evidence checks, consent revocation between sections, strict private routing, encrypted round trips, wrong passphrases, tampering, schedule limits and handoff filtering. Added regressions cover progressing downloads, separate reply deadlines, the first verified streamed token, competing jobs, cloud-first consent scope, tour placement and blocked tour-preference storage.
+- 64 Vitest service tests. This includes cancellation of an engine that ignores AbortSignal, native model cancellation and retry isolation, probe provenance, rejection of missing dose units/forms, retention of route/duration/status, exact decimal evidence checks, consent revocation between sections, strict private routing, encrypted round trips, wrong passphrases, tampering, schedule limits and handoff filtering. Added regressions cover progressing downloads, separate reply deadlines, the first verified streamed token, competing jobs, cloud-first consent scope, tour placement, below-fold scroll destinations, off-screen highlight rejection and blocked tour-preference storage.
 - Actual local OCR integration: synthetic image read with 95% reported confidence; expected name, MRN, 0.5 mg decimal and second medicine matched.
 - TypeScript, production PWA build and MV3 extension build.
 
@@ -59,3 +59,12 @@ All test documents are synthetic. Service-engine mocks are not represented as re
 - Finish returned to the original route. A separate replay began from `#privacy`; pressing Escape returned there and preserved the exact synthetic document text. Only the tour preference was stored. Replaying remained available after completion.
 - Actual card bounds passed at 320 × 740 (296 × 427 card inside the viewport) and 812 × 375 landscape (356 × 343 card inside the viewport). Temporary viewport overrides were reset. Reduced-motion CSS disables the tour entrance and progress animations.
 - Screenshots: `guided-tour-desktop.png`, `guided-tour-mobile.png`. No real patient content appears in these artifacts.
+
+## Tour scrolling correction — November 16, 2026
+
+- Reproduced the reported failure: step 6's target remained at 1569–1621px in a 943px-high viewport. The previous text/navigation checks had not verified target visibility. `scrollIntoView` on the inert target did not bring it into view.
+- Replaced target-based scrolling with direct document scrolling, waited for route/pane/layout changes, and reserved temporary bottom space. Off-screen targets no longer produce a misleading tiny highlight. Temporary scroll space is removed on exit.
+- Measured actual targets for steps **6, 7, 9 and 11** fully inside the desktop viewport after navigation. Step 6 moved to 417–469px in an 887px-high viewport.
+- Retested the reported steps at **375 × 812** and **768 × 1024**, including backward navigation. All target rectangles were visible and did not overlap their tour cards. The phone/tablet cards were 320px wide and approximately 204–290px high, with shorter explanations.
+- Verified **1024 × 768** landscape: the questions target remained visible and its compact card fit within the viewport. Skip restored the original route and removed temporary scroll space; the viewport override was reset.
+- Screenshots: `tour-scroll-desktop.png`, `tour-scroll-phone.png`. The screenshots use an empty test workspace.

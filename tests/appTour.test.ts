@@ -1,7 +1,45 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { placeTourCard, rememberTour, tourHasBeenSeen } from '../src/services/appTour';
+import {
+  placeTourCard,
+  rememberTour,
+  tourHasBeenSeen,
+  tourScrollDestination,
+  clipTourTarget,
+} from '../src/services/appTour';
 afterEach(() => vi.unstubAllGlobals());
 describe('guided tour placement', () => {
+  it('brings below-fold targets into view without depending on an inert element scroll method', () => {
+    const viewport = { width: 1400, height: 900 };
+    const top = tourScrollDestination(
+      { left: 300, top: 1600, width: 500, height: 60 },
+      0,
+      viewport,
+      350,
+    );
+    expect(1600 - top).toBeGreaterThanOrEqual(96);
+    expect(1600 - top + 60).toBeLessThan(900);
+    const mobile = { width: 375, height: 812 };
+    const destination = tourScrollDestination(
+      { left: 20, top: 1800, width: 300, height: 70 },
+      200,
+      mobile,
+      300,
+    );
+    const visibleTop = 1800 - (destination - 200);
+    expect(visibleTop).toBe(96);
+    expect(visibleTop + 70).toBeLessThan(mobile.height - 300 - 12);
+  });
+  it('never renders an off-screen highlight as a misleading four-pixel sliver', () => {
+    expect(
+      clipTourTarget({ left: 20, top: 1600, width: 400, height: 60 }, { width: 1400, height: 900 }),
+    ).toBeNull();
+    expect(
+      clipTourTarget({ left: 20, top: -100, width: 300, height: 50 }, { width: 375, height: 812 }),
+    ).toBeNull();
+    expect(
+      clipTourTarget({ left: 20, top: 96, width: 300, height: 60 }, { width: 375, height: 812 }),
+    ).toEqual({ left: 14, top: 90, width: 312, height: 72 });
+  });
   it('places the navigation explanation beside the desktop menu without covering it', () => {
     const card = placeTourCard(
       { left: 16, top: 130, width: 180, height: 220 },
