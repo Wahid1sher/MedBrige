@@ -1,13 +1,16 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
+import { WorkspaceProvider } from './state/Workspace';
 import { CarePlanProvider } from './state/CarePlan';
 import './modern.css';
 import './responsive.css';
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <CarePlanProvider>
-      <App />
+      <WorkspaceProvider>
+        <App />
+      </WorkspaceProvider>
     </CarePlanProvider>
   </StrictMode>,
 );
@@ -24,3 +27,5 @@ import './sky.css';
 import './identity.css';
 import './complete.css';
 import './tour.css';
+
+import './workspace.css';

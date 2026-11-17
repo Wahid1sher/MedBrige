@@ -11,7 +11,16 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { WorkspaceLayout, type Page } from './components/WorkspaceLayout';
-import { Overview } from './components/Overview';
+import {
+  TodayPage,
+  DocumentsLibrary,
+  MedicinesBrowser,
+  SchedulePage,
+  CareCirclePanel,
+  HowItWorks,
+  GpSummary,
+} from './components/WorkspacePages';
+import { useWorkspace } from './state/Workspace';
 import { ConfirmNewReview } from './components/ConfirmNewReview';
 import { DischargeUploader } from './components/DischargeUploader';
 import { PiiScrubberView } from './components/PiiScrubberView';
@@ -53,14 +62,30 @@ No clock times are provided. Ask the care team to confirm the current list.
 This is fictional teaching text, not a prescription.`;
 const route = (): Page => {
   const hash = location.hash.slice(1);
-  return hash === 'privacy'
-    ? 'documents'
-    : (['documents', 'medicines', 'caregivers'] as string[]).includes(hash)
-      ? (hash as Page)
-      : 'overview';
+  return hash === 'source-review'
+    ? 'medicines'
+    : hash === 'care-handoff'
+      ? 'caregivers'
+      : hash === 'document-intake'
+        ? 'documents'
+        : hash === 'privacy'
+          ? 'documents'
+          : (
+                [
+                  'documents',
+                  'medicines',
+                  'caregivers',
+                  'schedule',
+                  'how-it-works',
+                  'gp-summary',
+                ] as string[]
+              ).includes(hash)
+            ? (hash as Page)
+            : 'overview';
 };
 export default function App() {
   const { snapshot, setSnapshot } = useCarePlan();
+  const { example, setExample, documents, display } = useWorkspace();
   const [documentEpoch, setDocumentEpoch] = useState(0);
   const [raw, setRaw] = useState(''),
     [permit, setPermit] = useState<CloudPermit | null>(null),
@@ -92,7 +117,11 @@ export default function App() {
       setPage(route());
       if (location.hash === '#privacy') setPane('privacy');
       else if (location.hash === '#documents') setPane('source');
-      if (location.hash === '#day-plan')
+      if (['#source-review', '#care-handoff', '#document-intake'].includes(location.hash)) {
+        requestAnimationFrame(() =>
+          document.getElementById(location.hash.slice(1))?.scrollIntoView({ block: 'start' }),
+        );
+      } else if (location.hash === '#day-plan')
         setTimeout(
           () => document.getElementById('day-plan')?.scrollIntoView({ block: 'start' }),
           0,
@@ -186,6 +215,7 @@ export default function App() {
     setRequestedPolicy(null);
     setAnalysis(null);
     setError('');
+    setExample(false);
     setRaw(text);
     setSnapshot((s) => ({ ...emptySnapshot(), questions: s.questions }));
   }
@@ -385,8 +415,8 @@ export default function App() {
   return (
     <WorkspaceLayout
       page={page}
-      documentCount={raw.trim() ? 1 : 0}
-      medicineCount={snapshot.medicines.length}
+      documentCount={example ? 5 : documents.length + (raw.trim() ? 1 : 0)}
+      medicineCount={display.medicines.length}
       onNew={requestNew}
       privacyControls={privacyPanel}
       privacyLabel={
@@ -405,30 +435,30 @@ export default function App() {
         </div>
         {page === 'overview' && (
           <>
-            <Overview
-              raw={raw}
-              medicineCount={snapshot.medicines.length}
-              redactions={scrubbed.redactions.length}
-              onSample={requestSample}
-              onDocuments={() => navigate('documents')}
-              policyLabel={
-                policy === 'local-only'
-                  ? 'Strict local'
-                  : policy === 'local-first-with-consent'
-                    ? 'Balanced'
-                    : 'Best quality'
-              }
-            />
+            <TodayPage raw={raw} onAdd={() => navigate('documents')} />
             <div className="mobile-privacy-panel">{privacyPanel}</div>
             {firebaseConfigured() && <LocalAiCheck check={localCheck} disabled={busy} />}
           </>
         )}
         {page === 'documents' && (
           <>
+            {
+              <DocumentsLibrary
+                raw={raw}
+                redactions={scrubbed.redactions.length}
+                onOpen={changeText}
+                onAdd={() =>
+                  document
+                    .getElementById('document-intake')
+                    ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                }
+              />
+            }
+            <div id="document-intake" />
             <div className="page-heading">
               <div>
                 <span className="eyebrow">YOUR WORDS. YOUR BOUNDARIES.</span>
-                <h1>Start with the source.</h1>
+                <h2 className="ws-intake-title">Start with the source.</h2>
                 <p>Bring your instructions into focus. Keep the original close.</p>
               </div>
               <span className="page-status">
@@ -603,39 +633,49 @@ export default function App() {
         )}
         {page === 'medicines' && (
           <>
-            <div className="page-heading">
-              <div>
-                <span className="eyebrow">THE DETAILS THAT MATTER</span>
-                <h1>
-                  Less guesswork.
-                  <br />
-                  <span>More understanding.</span>
-                </h1>
-                <p>Every instruction, connected to the words it came from.</p>
-              </div>
-              <a href="#documents" className="button secondary">
-                <FileText size={16} aria-hidden="true" />
-                Your documents
-              </a>
-            </div>
-            <MedicationSchedule analysis={analysis} sourceText={raw} />
+            <MedicinesBrowser />
+            {(!example || tourOpen) && (
+              <>
+                <div id="source-review" className="ws-review-heading">
+                  <span className="section-kicker">COMPARE WITH THE ORIGINAL</span>
+                  <h2>Source review & confirmed times</h2>
+                  <p>
+                    Keep the original medicine review here, including manual entry and source
+                    checks.
+                  </p>
+                </div>
+                <MedicationSchedule analysis={analysis} sourceText={raw} />
+              </>
+            )}
           </>
         )}
+        {page === 'schedule' && <SchedulePage />}
+        {page === 'how-it-works' && (
+          <HowItWorks
+            analysis={analysis}
+            redactions={scrubbed.redactions.length}
+            runtimeStatus={runtimeStatus}
+          />
+        )}
+        {page === 'gp-summary' && <GpSummary />}
         {page === 'caregivers' && (
           <>
-            <div className="page-heading">
-              <div>
-                <span className="eyebrow">YOUR PEOPLE. YOUR PERMISSION.</span>
-                <h1>
-                  You don’t have to
-                  <br />
-                  <span>figure it out alone.</span>
-                </h1>
-                <p>A private care handoff for the people you trust.</p>
-              </div>
-              <span className="research-badge">Encrypted on your device</span>
-            </div>
-            <CaregiverSync onRestore={() => setAnalysis(null)} />
+            <CareCirclePanel />
+            {(!example || tourOpen) && (
+              <>
+                <div id="care-handoff" className="ws-review-heading">
+                  <span className="section-kicker">YOUR PEOPLE. YOUR PERMISSION.</span>
+                  <h2>Prepare a private handoff.</h2>
+                  <p>Encrypted files for the people you trust. No automatic sharing.</p>
+                </div>
+                <CaregiverSync
+                  onRestore={() => {
+                    setAnalysis(null);
+                    setExample(false);
+                  }}
+                />
+              </>
+            )}
           </>
         )}
         <footer>

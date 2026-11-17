@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { ReadingOptions } from './ReadingOptions';
 import {
   Sun,
   FileText,
@@ -9,13 +10,25 @@ import {
   ArrowUpRight,
   CircleHelp,
   ChevronDown,
+  CalendarDays,
+  Layers,
+  MoreHorizontal,
 } from 'lucide-react';
-export type Page = 'overview' | 'documents' | 'medicines' | 'caregivers';
+export type Page =
+  | 'overview'
+  | 'documents'
+  | 'medicines'
+  | 'schedule'
+  | 'caregivers'
+  | 'how-it-works'
+  | 'gp-summary';
 const navigation = [
   { id: 'overview', label: 'Today', icon: Sun },
   { id: 'documents', label: 'Documents', icon: FileText },
   { id: 'medicines', label: 'Medicines', icon: Pill },
+  { id: 'schedule', label: 'Schedule', icon: CalendarDays },
   { id: 'caregivers', label: 'Care circle', icon: Users },
+  { id: 'how-it-works', label: 'How it works', icon: Layers },
 ] as const;
 export function BrandMark() {
   return (
@@ -57,31 +70,35 @@ export function WorkspaceLayout({
   tourDisabled,
 }: Props) {
   const links = (mobile = false) =>
-    navigation.map(({ id, label, icon: Icon }) => {
-      const count = id === 'documents' ? documentCount : id === 'medicines' ? medicineCount : 0;
-      return (
-        <a
-          href={`#${id}`}
-          key={id}
-          aria-label={label}
-          aria-current={page === id ? 'page' : undefined}
-          className={page === id ? 'active' : ''}
-        >
-          <span className="nav-icon">
-            <Icon size={mobile ? 22 : 20} aria-hidden="true" />
-          </span>
-          <span className="nav-copy">
-            <strong>{label}</strong>
-          </span>
-          {!mobile &&
-            (count > 0 ? (
-              <small>{count}</small>
-            ) : page === id ? (
-              <i className="nav-active-dot" aria-hidden="true" />
-            ) : null)}
-        </a>
-      );
-    });
+    navigation
+      .filter(
+        (item) => !mobile || ['overview', 'documents', 'medicines', 'caregivers'].includes(item.id),
+      )
+      .map(({ id, label, icon: Icon }) => {
+        const count = id === 'documents' ? documentCount : id === 'medicines' ? medicineCount : 0;
+        return (
+          <a
+            href={`#${id}`}
+            key={id}
+            aria-label={label}
+            aria-current={page === id ? 'page' : undefined}
+            className={page === id ? 'active' : ''}
+          >
+            <span className="nav-icon">
+              <Icon size={mobile ? 22 : 20} aria-hidden="true" />
+            </span>
+            <span className="nav-copy">
+              <strong>{label}</strong>
+            </span>
+            {!mobile &&
+              (count > 0 ? (
+                <small>{count}</small>
+              ) : page === id ? (
+                <i className="nav-active-dot" aria-hidden="true" />
+              ) : null)}
+          </a>
+        );
+      });
   return (
     <div className="app-shell">
       <a href="#main" className="skip-link">
@@ -105,7 +122,7 @@ export function WorkspaceLayout({
         <nav aria-label="Workspace" data-tour="workspace-nav">
           {links()}
         </nav>
-        <a className="sidebar-add" href="#documents">
+        <a className="sidebar-add" href="#document-intake">
           <span>
             <Plus size={18} aria-hidden="true" />
           </span>
@@ -152,9 +169,14 @@ export function WorkspaceLayout({
           <div className="breadcrumb">
             <span>Your space</span>
             <span>/</span>
-            <strong>{navigation.find((item) => item.id === page)?.label}</strong>
+            <strong>
+              {page === 'gp-summary'
+                ? 'GP summary'
+                : navigation.find((item) => item.id === page)?.label}
+            </strong>
           </div>
           <div className="header-actions">
+            <ReadingOptions />
             <button
               className="header-tour"
               data-tour="tour-launcher"
@@ -183,6 +205,32 @@ export function WorkspaceLayout({
       </div>
       <nav className="mobile-nav" aria-label="Mobile workspace" data-tour="workspace-nav">
         {links(true)}
+        <details className="mobile-more">
+          <summary aria-label="More pages">
+            <MoreHorizontal size={22} />
+            <strong>More</strong>
+          </summary>
+          <div>
+            <a
+              href="#schedule"
+              aria-label="Schedule"
+              onClick={(event) => event.currentTarget.closest('details')?.removeAttribute('open')}
+              aria-current={page === 'schedule' ? 'page' : undefined}
+            >
+              <CalendarDays size={18} />
+              Schedule
+            </a>
+            <a
+              href="#how-it-works"
+              aria-label="How it works"
+              onClick={(event) => event.currentTarget.closest('details')?.removeAttribute('open')}
+              aria-current={page === 'how-it-works' ? 'page' : undefined}
+            >
+              <Layers size={18} />
+              How it works
+            </a>
+          </div>
+        </details>
       </nav>
     </div>
   );

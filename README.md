@@ -17,11 +17,24 @@ The research app targets the **Web / Chrome** track of #BuildHybridAI. Generativ
 - AES-GCM encryption with PBKDF2-derived keys, random salt/nonce and payload validation. Photos and original documents are excluded from saved care copies.
 - Responsive desktop navigation and mobile bottom tabs; a self-hosted offline app shell and OCR assets.
 - A local-only MV3 selected-text privacy-review extension. Its text is never auto-scraped or auto-uploaded.
-- A compact four-page menu, expandable privacy settings and a replayable 12-step spotlight tour. The guide covers intake, photo scanning, privacy, processing modes, local AI checks, medicine review, daily logging, encrypted handoffs and care-team questions. Back/Next, Skip, Escape and arrow keys work on desktop and phones. It never uploads files, starts AI, gives cloud consent or edits the source/care plan.
+- Six prototype-inspired tabs (Today, Documents, Medicines, Schedule, Care circle and How it works), a printable GP summary, expandable privacy settings and a replayable 12-step spotlight tour. The guide covers intake, photo scanning, privacy, processing modes, local AI checks, medicine review, daily logging, encrypted handoffs and care-team questions. Back/Next, Skip, Escape and arrow keys work on desktop and phones. It never uploads files, starts AI, gives cloud consent or edits the source/care plan.
 
 The tour is offered once on a fresh, empty home screen and can be replayed from the menu or header. It restores the starting screen and scroll position when finished or skipped. Only a tour-completed/skipped preference is stored; no care data is added to storage by the tour. It is unavailable during AI work, scanning, a pending photo or camera capture.
 
 Tour targets are brought into view by scrolling the document directly, including when the app behind the modal is inert. The guide retries after route/pane changes, reserves temporary scroll room for bottom sections and never draws a highlight for a fully off-screen target. Phone/tablet cards use shorter explanations and a 320px maximum width/height. Explanation text can scroll independently while Back/Next remain visible.
+
+## Prototype workspace
+
+The Readdy reference is recreated as six responsive workspace tabs plus a GP conversation sheet. The original privacy toggle, cloud-consent logic, local AI probe and 12-step tour implementation are preserved. On phones, four primary tabs and a More menu keep the remaining pages accessible.
+
+- Document selection and filters, in-memory session copies, and the original local photo/PDF intake.
+- Medicine detail panels, time-of-day filters, source-linked review, and care-team questions.
+- A grouped daily schedule, individual/bulk taken logging, undo, and in-page test reminders. Earlier dates show recorded check-ins only; no past missed doses are inferred.
+- In-memory contact cards, personal activity and editable GP observations. Adding a contact sends no invitation and grants no access. Actual handoff still uses encrypted files.
+- A printable GP sheet that includes unreviewed and paused source entries, questions and optional observations. Review before sharing.
+- Device-only reading preferences and an isolated, explicitly fictional example workspace. Example activity cannot change the real care plan.
+
+Session documents, contacts and observations are cleared on refresh and are not included in encrypted care-file exports. Only the existing care snapshot is exported. Reminders work only while the schedule page remains open; there are no background notifications. No live sharing, telemetry percentages or clinical interaction screening is simulated as a working backend.
 
 ## Run
 
@@ -57,7 +70,7 @@ Official references: [hybrid web setup](https://firebase.google.com/docs/ai-logi
 
 ## Verification and limitations
 
-64 automated tests cover redaction, consent expiry/revocation, private routing, connectivity changes, source-evidence rejection, long-document sections, file limits, cancellation, encryption, wrong passphrases, tampering, schedule validation and handoff filtering. They also cover native model cancellation, fresh retry sessions, the local-only readiness probe, rejection of missing dose units/forms, progressing downloads, separate reply deadlines, duplicate-job prevention, mode-specific cloud consent, tour positioning, off-screen target rejection, scroll destinations and tour-preference storage failures. A real local OCR integration test reads the fictional fixture and checks name, MRN and decimal dose. Browser testing verified photo OCR at 95% reported confidence, redaction, reviewed schedule creation, taken logging, encrypted saving and wrong/correct-passphrase restore, scanned-PDF OCR, camera initialization/close, valid/invalid manual source entry and an actual encrypted Chrome download/decryption.
+70 automated tests cover redaction, consent expiry/revocation, private routing, connectivity changes, source-evidence rejection, long-document sections, file limits, cancellation, encryption, wrong passphrases, tampering, schedule validation and handoff filtering. They also cover native model cancellation, fresh retry sessions, the local-only readiness probe, rejection of missing dose units/forms, progressing downloads, separate reply deadlines, duplicate-job prevention, mode-specific cloud consent, tour positioning, off-screen target rejection, scroll destinations and tour-preference storage failures. A real local OCR integration test reads the fictional fixture and checks name, MRN and decimal dose. Browser testing verified photo OCR at 95% reported confidence, redaction, reviewed schedule creation, taken logging, encrypted saving and wrong/correct-passphrase restore, scanned-PDF OCR, camera initialization/close, valid/invalid manual source entry and an actual encrypted Chrome download/decryption.
 
 Local inference was also verified in desktop Chrome through Firebase AI Logic: a short readiness probe and a synthetic one-medicine extraction completed with `on-device` provenance. The accepted draft preserved 250 mg, 1 capsule, by mouth, every 8 hours and 5 days from the supplied fictional test text. This proves the local route, not a specific Nano 4 revision. A **Check local AI** button tests a fixed short prompt without sending any document text. Timeout messages distinguish setup, extraction and user cancellation. Standard JSON Schema constraints require a non-null medicine name, bound output size and permit null optional fields; all generated evidence still undergoes independent source validation.
 
