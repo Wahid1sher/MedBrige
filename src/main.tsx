@@ -30,3 +30,4 @@ import './tour.css';
 
 import './workspace.css';
 import './reference-colors.css';
+import './replica.css';

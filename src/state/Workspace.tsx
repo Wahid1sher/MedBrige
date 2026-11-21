@@ -16,6 +16,11 @@ export interface CareContact {
   note: string;
 }
 interface WorkspaceState {
+  intakeOpen: boolean;
+  intakeView: 'add' | 'result';
+  openIntake: () => void;
+  showIntakeResult: () => void;
+  closeIntake: () => void;
   example: boolean;
   setExample: Dispatch<SetStateAction<boolean>>;
   display: CareSnapshot;
@@ -31,6 +36,8 @@ const Context = createContext<WorkspaceState | null>(null);
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const { snapshot, setSnapshot } = useCarePlan();
   const [example, setExample] = useState(false);
+  const [intakeOpen, setIntakeOpen] = useState(false);
+  const [intakeView, setIntakeView] = useState<'add' | 'result'>('add');
   const [demo, setDemo] = useState(exampleSnapshot);
   const [documents, setDocuments] = useState<SessionDocument[]>([]);
   const [contacts, setContacts] = useState<CareContact[]>([]);
@@ -38,6 +45,17 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   return (
     <Context.Provider
       value={{
+        intakeOpen,
+        intakeView,
+        openIntake: () => {
+          setIntakeView('add');
+          setIntakeOpen(true);
+        },
+        showIntakeResult: () => {
+          setIntakeView('result');
+          setIntakeOpen(true);
+        },
+        closeIntake: () => setIntakeOpen(false),
         example,
         setExample,
         display: example ? demo : snapshot,

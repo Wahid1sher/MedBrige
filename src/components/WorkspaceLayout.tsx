@@ -53,6 +53,7 @@ interface Props {
   readonly documentCount: number;
   readonly medicineCount: number;
   readonly onNew: () => void;
+  readonly onAdd: () => void;
   readonly privacyControls: ReactNode;
   readonly privacyLabel: string;
   readonly onTour: () => void;
@@ -64,6 +65,7 @@ export function WorkspaceLayout({
   documentCount,
   medicineCount,
   onNew,
+  onAdd,
   privacyControls,
   privacyLabel,
   onTour,
@@ -122,13 +124,13 @@ export function WorkspaceLayout({
         <nav aria-label="Workspace" data-tour="workspace-nav">
           {links()}
         </nav>
-        <a className="sidebar-add" href="#document-intake">
+        <button className="sidebar-add" onClick={onAdd}>
           <span>
             <Plus size={18} aria-hidden="true" />
           </span>
           <div>Add document</div>
           <ArrowUpRight size={17} aria-hidden="true" />
-        </a>
+        </button>
         <div className="sidebar-bottom">
           <details className="sidebar-settings">
             <summary>

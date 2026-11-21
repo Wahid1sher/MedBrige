@@ -36,6 +36,12 @@ The Readdy reference is recreated as six responsive workspace tabs plus a GP con
 
 Session documents, contacts and observations are cleared on refresh and are not included in encrypted care-file exports. Only the existing care snapshot is exported. Reminders work only while the schedule page remains open; there are no background notifications. No live sharing, telemetry percentages or clinical interaction screening is simulated as a working backend.
 
+## Screenshot layout
+
+The six workspace tabs now follow the supplied reference layouts, not only their colors: a wide sky hero with a right-hand intake card, a study-and-personal-log column beside three summary panels, dense document/medicine lists with narrow inspectors, the grouped schedule and catch-up example, a two-column care circle, and the flow/stack/parser layout in How it works. Original review tools live in expandable source and handoff panels so they remain available without overwhelming the main pages.
+
+Add document opens a keyboard-accessible native dialog with local photo/PDF intake, paste entry, masked-text review, source-linked draft results, and a completion step leading to medicine review. It never fabricates a generated plan or schedules medicines automatically. The example result is explicitly hand-authored. Existing cloud consent and privacy modes remain in place; the tour files are unchanged. All twelve spotlight targets were verified at phone size after the layout changes.
+
 ## Run
 
 Use Node 22.12+ (development verified on Node 26).

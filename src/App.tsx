@@ -21,6 +21,7 @@ import {
   GpSummary,
 } from './components/WorkspacePages';
 import { useWorkspace } from './state/Workspace';
+import { DocumentDialog } from './components/DocumentDialog';
 import { ConfirmNewReview } from './components/ConfirmNewReview';
 import { DischargeUploader } from './components/DischargeUploader';
 import { PiiScrubberView } from './components/PiiScrubberView';
@@ -85,7 +86,18 @@ const route = (): Page => {
 };
 export default function App() {
   const { snapshot, setSnapshot } = useCarePlan();
-  const { example, setExample, documents, display } = useWorkspace();
+  const {
+    example,
+    setExample,
+    documents,
+    display,
+    intakeOpen,
+    intakeView,
+    openIntake,
+    showIntakeResult,
+    closeIntake,
+  } = useWorkspace();
+  const intakeAnalysis = useRef(false);
   const [documentEpoch, setDocumentEpoch] = useState(0);
   const [raw, setRaw] = useState(''),
     [permit, setPermit] = useState<CloudPermit | null>(null),
@@ -117,10 +129,17 @@ export default function App() {
       setPage(route());
       if (location.hash === '#privacy') setPane('privacy');
       else if (location.hash === '#documents') setPane('source');
-      if (['#source-review', '#care-handoff', '#document-intake'].includes(location.hash)) {
+      if (location.hash === '#privacy') {
         requestAnimationFrame(() =>
-          document.getElementById(location.hash.slice(1))?.scrollIntoView({ block: 'start' }),
+          document.querySelector('[data-tour="redaction"]')?.scrollIntoView({ block: 'start' }),
         );
+      } else if (['#source-review', '#care-handoff', '#document-intake'].includes(location.hash)) {
+        requestAnimationFrame(() => {
+          const target = document.getElementById(location.hash.slice(1));
+          const drawer = target?.closest('details');
+          if (drawer) drawer.open = true;
+          target?.scrollIntoView({ block: 'start' });
+        });
       } else if (location.hash === '#day-plan')
         setTimeout(
           () => document.getElementById('day-plan')?.scrollIntoView({ block: 'start' }),
@@ -322,6 +341,10 @@ export default function App() {
           checkins: {},
         }));
         navigate('medicines');
+        if (intakeAnalysis.current) {
+          intakeAnalysis.current = false;
+          showIntakeResult();
+        }
       }
     } catch (e) {
       if (pending.current === controller)
@@ -383,6 +406,10 @@ export default function App() {
     });
     setSnapshot((s) => ({ ...s, medicines: meds.map(draftToPlan), checkins: {} }));
     navigate('medicines');
+    if (intakeAnalysis.current) {
+      intakeAnalysis.current = false;
+      showIntakeResult();
+    }
   }
   const progressText =
     progress?.stage === 'preparing-local'
@@ -418,6 +445,7 @@ export default function App() {
       documentCount={example ? 5 : documents.length + (raw.trim() ? 1 : 0)}
       medicineCount={display.medicines.length}
       onNew={requestNew}
+      onAdd={openIntake}
       privacyControls={privacyPanel}
       privacyLabel={
         policy === 'local-only'
@@ -435,7 +463,7 @@ export default function App() {
         </div>
         {page === 'overview' && (
           <>
-            <TodayPage raw={raw} onAdd={() => navigate('documents')} />
+            <TodayPage raw={raw} onAdd={openIntake} />
             <div className="mobile-privacy-panel">{privacyPanel}</div>
             {firebaseConfigured() && <LocalAiCheck check={localCheck} disabled={busy} />}
           </>
@@ -447,188 +475,206 @@ export default function App() {
                 raw={raw}
                 redactions={scrubbed.redactions.length}
                 onOpen={changeText}
-                onAdd={() =>
-                  document
-                    .getElementById('document-intake')
-                    ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                }
+                onAdd={openIntake}
               />
             }
-            <div id="document-intake" />
-            <div className="page-heading">
-              <div>
-                <span className="eyebrow">YOUR WORDS. YOUR BOUNDARIES.</span>
-                <h2 className="ws-intake-title">Start with the source.</h2>
-                <p>Bring your instructions into focus. Keep the original close.</p>
-              </div>
-              <span className="page-status">
-                <LockKeyhole size={14} aria-hidden="true" />
-                Private by default
-              </span>
-            </div>
-            <div className="review-steps">
-              <span className={raw.trim() ? 'done' : 'current'}>
-                <i>{raw.trim() ? <Check size={13} aria-hidden="true" /> : '1'}</i>Add document
-              </span>
-              <ChevronRight size={14} aria-hidden="true" />
-              <span className={permit ? 'done' : ''}>
-                <i>{permit ? <Check size={13} aria-hidden="true" /> : '2'}</i>Choose privacy
-              </span>
-              <ChevronRight size={14} aria-hidden="true" />
-              <span>
-                <i>3</i>Extract & review
-              </span>
-            </div>
-            <div className="document-pane-switch" role="group" aria-label="Document review panel">
-              <button aria-pressed={pane === 'source'} onClick={() => setPane('source')}>
-                <FileText size={16} aria-hidden="true" />
-                Original document
-              </button>
-              <button aria-pressed={pane === 'privacy'} onClick={() => setPane('privacy')}>
-                <ShieldCheck size={16} aria-hidden="true" />
-                Private preview{' '}
-                {scrubbed.redactions.length > 0 && <small>{scrubbed.redactions.length}</small>}
-              </button>
-            </div>
-            <div className="document-grid" data-pane={pane}>
-              <div className="source-panel">
-                <DischargeUploader
-                  key={documentEpoch}
-                  value={raw}
-                  onChange={changeText}
-                  onSample={requestSample}
-                  onPendingChange={setIntakePending}
-                />
-                <button
-                  className="mobile-continue button dark"
-                  disabled={!raw.trim()}
-                  onClick={() => {
-                    setPane('privacy');
-                    window.scrollTo({ top: 0 });
-                  }}
+            <details
+              className="r-workflow-drawer"
+              open={
+                tourOpen || pane === 'privacy' || location.hash === '#document-intake'
+                  ? true
+                  : undefined
+              }
+            >
+              <summary>
+                <FileText size={15} />
+                Review original text, privacy & extraction
+                <ChevronRight size={15} />
+              </summary>
+              <div className="r-workflow-body">
+                <div id="document-intake" />
+                <div className="page-heading">
+                  <div>
+                    <span className="eyebrow">YOUR WORDS. YOUR BOUNDARIES.</span>
+                    <h2 className="ws-intake-title">Start with the source.</h2>
+                    <p>Bring your instructions into focus. Keep the original close.</p>
+                  </div>
+                  <span className="page-status">
+                    <LockKeyhole size={14} aria-hidden="true" />
+                    Private by default
+                  </span>
+                </div>
+                <div className="review-steps">
+                  <span className={raw.trim() ? 'done' : 'current'}>
+                    <i>{raw.trim() ? <Check size={13} aria-hidden="true" /> : '1'}</i>Add document
+                  </span>
+                  <ChevronRight size={14} aria-hidden="true" />
+                  <span className={permit ? 'done' : ''}>
+                    <i>{permit ? <Check size={13} aria-hidden="true" /> : '2'}</i>Choose privacy
+                  </span>
+                  <ChevronRight size={14} aria-hidden="true" />
+                  <span>
+                    <i>3</i>Extract & review
+                  </span>
+                </div>
+                <div
+                  className="document-pane-switch"
+                  role="group"
+                  aria-label="Document review panel"
                 >
-                  Continue to privacy <ArrowRight size={17} aria-hidden="true" />
-                </button>
-              </div>
-              <div className="preview-panel">
-                <PiiScrubberView
-                  document={scrubbed}
-                  reviewed={!!permit}
-                  onReviewed={review}
-                  cloudFirst={
-                    requestedPolicy === 'cloud-first-with-consent' ||
-                    policy === 'cloud-first-with-consent'
-                  }
-                />
-              </div>
-            </div>
-            {raw === sample && (
-              <div className="sample-review-action">
-                <span>Explore the complete flow with a hand-authored example. No AI call.</span>
-                <button className="button secondary" onClick={sampleReview}>
-                  Open sample review
-                </button>
-              </div>
-            )}
-            <div className="device-readiness">
-              <span className={connectivity === 'offline' ? 'offline' : ''}>
-                {connectivity === 'offline'
-                  ? 'Offline · local scan and manual review available'
-                  : 'Connected · photos stay on this device'}
-              </span>
-              <p>
-                {typeof window !== 'undefined' && 'LanguageModel' in window
-                  ? 'This browser exposes on-device AI. Model availability is checked when you extract.'
-                  : 'This browser has no supported on-device language model. Use manual entry, or review the cloud privacy choices. Local photo scanning still works.'}
-              </p>
-            </div>
-            <section className="processing-bar" aria-labelledby="processing-title">
-              <div className="processing-heading">
-                <span className="processing-icon">
-                  <ShieldCheck size={22} aria-hidden="true" />
-                </span>
-                <div>
-                  <h2 id="processing-title">Your document. Your choice.</h2>
+                  <button aria-pressed={pane === 'source'} onClick={() => setPane('source')}>
+                    <FileText size={16} aria-hidden="true" />
+                    Original document
+                  </button>
+                  <button aria-pressed={pane === 'privacy'} onClick={() => setPane('privacy')}>
+                    <ShieldCheck size={16} aria-hidden="true" />
+                    Private preview{' '}
+                    {scrubbed.redactions.length > 0 && <small>{scrubbed.redactions.length}</small>}
+                  </button>
+                </div>
+                <div className="document-grid" data-pane={pane}>
+                  <div className="source-panel">
+                    {!intakeOpen && (
+                      <DischargeUploader
+                        key={documentEpoch}
+                        value={raw}
+                        onChange={changeText}
+                        onSample={requestSample}
+                        onPendingChange={setIntakePending}
+                      />
+                    )}
+                    <button
+                      className="mobile-continue button dark"
+                      disabled={!raw.trim()}
+                      onClick={() => {
+                        setPane('privacy');
+                        window.scrollTo({ top: 0 });
+                      }}
+                    >
+                      Continue to privacy <ArrowRight size={17} aria-hidden="true" />
+                    </button>
+                  </div>
+                  <div className="preview-panel">
+                    <PiiScrubberView
+                      document={scrubbed}
+                      reviewed={!!permit}
+                      onReviewed={review}
+                      cloudFirst={
+                        requestedPolicy === 'cloud-first-with-consent' ||
+                        policy === 'cloud-first-with-consent'
+                      }
+                    />
+                  </div>
+                </div>
+                {raw === sample && (
+                  <div className="sample-review-action">
+                    <span>Explore the complete flow with a hand-authored example. No AI call.</span>
+                    <button className="button secondary" onClick={sampleReview}>
+                      Open sample review
+                    </button>
+                  </div>
+                )}
+                <div className="device-readiness">
+                  <span className={connectivity === 'offline' ? 'offline' : ''}>
+                    {connectivity === 'offline'
+                      ? 'Offline · local scan and manual review available'
+                      : 'Connected · photos stay on this device'}
+                  </span>
                   <p>
-                    {policy === 'local-only'
-                      ? 'Strict local never falls back to cloud AI.'
-                      : policy === 'local-first-with-consent'
-                        ? 'Balanced tries on-device AI before the approved cloud fallback.'
-                        : 'Best quality tries cloud AI first, using only your approved text.'}
+                    {typeof window !== 'undefined' && 'LanguageModel' in window
+                      ? 'This browser exposes on-device AI. Model availability is checked when you extract.'
+                      : 'This browser has no supported on-device language model. Use manual entry, or review the cloud privacy choices. Local photo scanning still works.'}
                   </p>
                 </div>
+                <section className="processing-bar" aria-labelledby="processing-title">
+                  <div className="processing-heading">
+                    <span className="processing-icon">
+                      <ShieldCheck size={22} aria-hidden="true" />
+                    </span>
+                    <div>
+                      <h2 id="processing-title">Your document. Your choice.</h2>
+                      <p>
+                        {policy === 'local-only'
+                          ? 'Strict local never falls back to cloud AI.'
+                          : policy === 'local-first-with-consent'
+                            ? 'Balanced tries on-device AI before the approved cloud fallback.'
+                            : 'Best quality tries cloud AI first, using only your approved text.'}
+                      </p>
+                    </div>
+                  </div>
+                  <div
+                    className="mode-controls"
+                    role="group"
+                    aria-label="AI processing mode"
+                    data-tour="processing"
+                  >
+                    <button
+                      aria-pressed={policy === 'local-only'}
+                      onClick={() => choosePrivacy('local-only')}
+                    >
+                      <LockKeyhole size={15} aria-hidden="true" />
+                      Strict local
+                    </button>
+                    <button
+                      disabled={!permit || isExtension()}
+                      aria-pressed={policy === 'local-first-with-consent'}
+                      aria-describedby="hybrid-help"
+                      onClick={() => choosePrivacy('local-first-with-consent')}
+                    >
+                      <Cloud size={16} aria-hidden="true" />
+                      Balanced
+                    </button>
+                    <button
+                      disabled={!permit || isExtension() || busy || localCheck.busy}
+                      aria-pressed={policy === 'cloud-first-with-consent'}
+                      onClick={() => choosePrivacy('cloud-first-with-consent')}
+                    >
+                      <Cloud size={16} aria-hidden="true" />
+                      Best quality
+                    </button>
+                  </div>
+                  <button
+                    className="button primary extract-button"
+                    disabled={busy || localCheck.busy || !raw.trim() || !firebaseConfigured()}
+                    aria-describedby={!firebaseConfigured() ? 'ai-setup-help' : undefined}
+                    onClick={() => void analyze()}
+                  >
+                    {busy ? <LoaderCircle size={18} className="spin" aria-hidden="true" /> : null}
+                    {busy ? progressText : 'Extract instructions'}
+                    {!busy && <ArrowRight size={17} aria-hidden="true" />}
+                  </button>
+                  {busy && (
+                    <button className="button secondary" onClick={() => pending.current?.abort()}>
+                      Cancel extraction
+                    </button>
+                  )}
+                  <p className="mode-help" id="hybrid-help">
+                    {permit
+                      ? 'Cloud permission is limited to the text you reviewed.'
+                      : 'Cloud modes require reviewing the preview and explicitly allowing cloud processing.'}
+                  </p>
+                  <span role="status" className="sr-only">
+                    {busy ? progressText : ''}
+                  </span>
+                </section>
+                {!firebaseConfigured() && (
+                  <div className="setup-note" id="ai-setup-help">
+                    <Info size={17} aria-hidden="true" />
+                    <p>
+                      <strong>AI extraction isn’t connected yet.</strong> You can still add
+                      documents and review local redaction.
+                    </p>
+                    <span>SETUP PENDING</span>
+                  </div>
+                )}
+                {error && (
+                  <p className="error" role="alert">
+                    {error}
+                  </p>
+                )}
+                {firebaseConfigured() && <LocalAiCheck disabled={busy} check={localCheck} />}
               </div>
-              <div
-                className="mode-controls"
-                role="group"
-                aria-label="AI processing mode"
-                data-tour="processing"
-              >
-                <button
-                  aria-pressed={policy === 'local-only'}
-                  onClick={() => choosePrivacy('local-only')}
-                >
-                  <LockKeyhole size={15} aria-hidden="true" />
-                  Strict local
-                </button>
-                <button
-                  disabled={!permit || isExtension()}
-                  aria-pressed={policy === 'local-first-with-consent'}
-                  aria-describedby="hybrid-help"
-                  onClick={() => choosePrivacy('local-first-with-consent')}
-                >
-                  <Cloud size={16} aria-hidden="true" />
-                  Balanced
-                </button>
-                <button
-                  disabled={!permit || isExtension() || busy || localCheck.busy}
-                  aria-pressed={policy === 'cloud-first-with-consent'}
-                  onClick={() => choosePrivacy('cloud-first-with-consent')}
-                >
-                  <Cloud size={16} aria-hidden="true" />
-                  Best quality
-                </button>
-              </div>
-              <button
-                className="button primary extract-button"
-                disabled={busy || localCheck.busy || !raw.trim() || !firebaseConfigured()}
-                aria-describedby={!firebaseConfigured() ? 'ai-setup-help' : undefined}
-                onClick={() => void analyze()}
-              >
-                {busy ? <LoaderCircle size={18} className="spin" aria-hidden="true" /> : null}
-                {busy ? progressText : 'Extract instructions'}
-                {!busy && <ArrowRight size={17} aria-hidden="true" />}
-              </button>
-              {busy && (
-                <button className="button secondary" onClick={() => pending.current?.abort()}>
-                  Cancel extraction
-                </button>
-              )}
-              <p className="mode-help" id="hybrid-help">
-                {permit
-                  ? 'Cloud permission is limited to the text you reviewed.'
-                  : 'Cloud modes require reviewing the preview and explicitly allowing cloud processing.'}
-              </p>
-              <span role="status" className="sr-only">
-                {busy ? progressText : ''}
-              </span>
-            </section>
-            {!firebaseConfigured() && (
-              <div className="setup-note" id="ai-setup-help">
-                <Info size={17} aria-hidden="true" />
-                <p>
-                  <strong>AI extraction isn’t connected yet.</strong> You can still add documents
-                  and review local redaction.
-                </p>
-                <span>SETUP PENDING</span>
-              </div>
-            )}
-            {error && (
-              <p className="error" role="alert">
-                {error}
-              </p>
-            )}
-            {firebaseConfigured() && <LocalAiCheck disabled={busy} check={localCheck} />}
+            </details>
           </>
         )}
         {page === 'medicines' && (
@@ -636,15 +682,27 @@ export default function App() {
             <MedicinesBrowser />
             {(!example || tourOpen) && (
               <>
-                <div id="source-review" className="ws-review-heading">
-                  <span className="section-kicker">COMPARE WITH THE ORIGINAL</span>
-                  <h2>Source review & confirmed times</h2>
-                  <p>
-                    Keep the original medicine review here, including manual entry and source
-                    checks.
-                  </p>
-                </div>
-                <MedicationSchedule analysis={analysis} sourceText={raw} />
+                <details
+                  className="r-workflow-drawer"
+                  open={tourOpen || location.hash === '#source-review' ? true : undefined}
+                >
+                  <summary>
+                    <FileText size={15} />
+                    Review source instructions & confirmed times
+                    <ChevronRight size={15} />
+                  </summary>
+                  <div className="r-workflow-body">
+                    <div id="source-review" className="ws-review-heading">
+                      <span className="section-kicker">COMPARE WITH THE ORIGINAL</span>
+                      <h2>Source review & confirmed times</h2>
+                      <p>
+                        Keep the original medicine review here, including manual entry and source
+                        checks.
+                      </p>
+                    </div>
+                    <MedicationSchedule analysis={analysis} sourceText={raw} />
+                  </div>
+                </details>
               </>
             )}
           </>
@@ -663,17 +721,29 @@ export default function App() {
             <CareCirclePanel />
             {(!example || tourOpen) && (
               <>
-                <div id="care-handoff" className="ws-review-heading">
-                  <span className="section-kicker">YOUR PEOPLE. YOUR PERMISSION.</span>
-                  <h2>Prepare a private handoff.</h2>
-                  <p>Encrypted files for the people you trust. No automatic sharing.</p>
-                </div>
-                <CaregiverSync
-                  onRestore={() => {
-                    setAnalysis(null);
-                    setExample(false);
-                  }}
-                />
+                <details
+                  className="r-workflow-drawer"
+                  open={tourOpen || location.hash === '#care-handoff' ? true : undefined}
+                >
+                  <summary>
+                    <LockKeyhole size={15} />
+                    Encrypted care files & questions for your care team
+                    <ChevronRight size={15} />
+                  </summary>
+                  <div className="r-workflow-body">
+                    <div id="care-handoff" className="ws-review-heading">
+                      <span className="section-kicker">YOUR PEOPLE. YOUR PERMISSION.</span>
+                      <h2>Prepare a private handoff.</h2>
+                      <p>Encrypted files for the people you trust. No automatic sharing.</p>
+                    </div>
+                    <CaregiverSync
+                      onRestore={() => {
+                        setAnalysis(null);
+                        setExample(false);
+                      }}
+                    />
+                  </div>
+                </details>
               </>
             )}
           </>
@@ -691,6 +761,31 @@ export default function App() {
           </span>
         </footer>
       </main>
+      <DocumentDialog
+        open={intakeOpen}
+        showResult={intakeView === 'result'}
+        raw={raw}
+        analysis={analysis}
+        onClose={closeIntake}
+        onChange={changeText}
+        onPendingChange={setIntakePending}
+        onExample={() => {
+          if (raw.trim() || snapshot.medicines.length || snapshot.questions.length) {
+            closeIntake();
+            requestSample();
+          } else changeText(sample);
+        }}
+        onContinue={() => {
+          intakeAnalysis.current = true;
+          closeIntake();
+          navigate('privacy');
+        }}
+        onPlan={() => {
+          closeIntake();
+          navigate('medicines');
+          location.hash = '#source-review';
+        }}
+      />
       <ConfirmNewReview
         open={dialogAction !== null}
         intent={dialogAction === 'sample' ? 'sample' : 'new'}
