@@ -29,3 +29,4 @@ import './complete.css';
 import './tour.css';
 
 import './workspace.css';
+import './reference-colors.css';

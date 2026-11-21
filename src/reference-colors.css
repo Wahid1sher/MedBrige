@@ -1,0 +1,378 @@
+/* Palette sampled from the supplied prototype screenshots. */
+:root {
+  --reference-blue: #2453cb;
+  --reference-royal: #2d5ee3;
+  --reference-navy: #0d172e;
+  --reference-paper: #fafdff;
+  --reference-tint: #e2f4ff;
+  --reference-soft: #f1f6fd;
+  --reference-line: #d8e6f5;
+  --reference-muted: #778397;
+  --reference-yellow: #f8d765;
+  --reference-sky: linear-gradient(
+    180deg,
+    #1e4dc4 0,
+    #2453cb 80px,
+    #2b5cd6 170px,
+    #407ae1 300px,
+    #63a3eb 450px,
+    #9bcaf8 600px,
+    #c4e5ff 700px,
+    #e3f4ff 800px,
+    #fafdff 900px
+  );
+}
+body,
+.app-shell {
+  background: var(--reference-paper);
+}
+.main-shell {
+  background: var(--reference-sky);
+}
+.topbar {
+  border-bottom-color: transparent;
+}
+.breadcrumb > span:first-child,
+.breadcrumb > span:nth-child(2) {
+  color: #b5ceff;
+}
+.breadcrumb strong,
+.session-badge {
+  color: var(--reference-paper);
+}
+.header-actions .new-review {
+  color: var(--reference-paper);
+  background: var(--reference-navy);
+  border-color: var(--reference-navy);
+}
+.header-actions .new-review:hover:not(:disabled) {
+  background: #192849 !important;
+}
+.ws-reading > summary {
+  background: #ffffff26;
+  border-color: transparent;
+}
+.prototype-callout {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  width: fit-content;
+  max-width: 100%;
+  padding: 5px 13px;
+  border: 1px solid #dce9ff99;
+  border-radius: 20px;
+  background: #c7d9fac7;
+  color: #44546f;
+}
+.prototype-callout > span {
+  padding: 0 10px 0 0;
+  border: 0;
+  border-right: 1px solid #ffffffad;
+  border-radius: 0;
+  background: transparent;
+  color: #1641b4;
+  letter-spacing: 1.5px;
+}
+.ws-page {
+  --ws-blue: var(--reference-royal);
+  --ws-muted: #6b788e;
+  color: var(--reference-navy);
+}
+.ws-intro h1,
+.ws-day-landscape h1 {
+  color: var(--reference-paper);
+}
+.ws-intro > div > p,
+.ws-day-landscape > p {
+  color: #e0edff;
+}
+.ws-intro > div:first-child > .ws-kicker,
+.ws-day-toolbar > .ws-kicker {
+  color: #bed7ff;
+}
+.ws-kicker,
+.ws-text-link {
+  color: var(--reference-blue);
+}
+.ws-example {
+  background: #ffffff1c;
+  border-color: #e6f1ff55;
+}
+.ws-card,
+.ws-empty,
+.discharge-research,
+.ws-gp-sheet {
+  background: var(--reference-paper);
+  border-color: #fafdff;
+  box-shadow:
+    0 16px 27px -20px #1330524d,
+    0 2px 7px #13305205;
+}
+.page-content .card,
+.page-content .processing-bar,
+.page-content .local-ai-check:not(.compact) {
+  background: var(--reference-paper);
+  border-color: #e4edf7;
+}
+.ws-card h2,
+.ws-card h3,
+.ws-gp-sheet h1,
+.ws-gp-sheet h2,
+.ws-grow > strong,
+.ws-row-top strong {
+  color: var(--reference-navy);
+}
+.ws-card > .ws-kicker,
+.ws-card-title .ws-kicker,
+.ws-gp-sheet .ws-kicker {
+  color: #7c899f;
+}
+.page-content .button.dark,
+.page-content .button.primary,
+.confirm-dialog .button.primary {
+  color: var(--reference-paper);
+  background: var(--reference-navy);
+  border-color: var(--reference-navy);
+}
+.page-content .button.dark:hover:not(:disabled),
+.page-content .button.primary:hover:not(:disabled),
+.confirm-dialog .button.primary:hover:not(:disabled) {
+  background: #1b2b4a;
+  border-color: #1b2b4a;
+}
+.page-content .button.secondary {
+  background: var(--reference-paper);
+  color: #27354d;
+  border-color: #cfdff1;
+}
+.ws-doc-row,
+.ws-medicine-row {
+  background: #fafdffb3;
+  border-color: #e0ebf680;
+}
+.ws-doc-row.selected,
+.ws-medicine-row.selected {
+  background: var(--reference-paper);
+  border-color: #bfdbff;
+  box-shadow: 0 8px 20px #14315a08;
+}
+.ws-tile,
+.ws-pill-icon,
+.ws-round-icon,
+.ws-hero-document,
+.ws-runtime-icon,
+.ws-large-pill,
+.ws-tinted,
+.tone-0 {
+  background: var(--reference-tint);
+  color: var(--reference-royal);
+}
+.tone-1 {
+  background: #fff3d0;
+  color: #a87912;
+}
+.tone-2 {
+  background: #e2f4ff;
+  color: #3264d9;
+}
+.ws-source-text,
+.ws-card blockquote,
+.ws-two-facts > div,
+.ws-toggle-row,
+.ws-observations textarea,
+.ws-gp-stats > div {
+  background: var(--reference-soft);
+  border-color: var(--reference-line);
+}
+.ws-doc-tags em,
+.ws-row-top em,
+.ws-chip {
+  background: #e3f3ff;
+  color: #355d8b;
+}
+.ws-add-tile {
+  background: #f3fbffb3;
+  border-color: #a6ceff;
+  color: #5d708a;
+}
+.ws-filters {
+  background: transparent;
+  padding: 0;
+  gap: 8px;
+}
+.ws-filters button {
+  background: var(--reference-paper);
+  color: #637188;
+  border: 1px solid #dfebf6;
+}
+.ws-filters button[aria-pressed='true'] {
+  color: var(--reference-paper);
+  background: var(--reference-navy);
+  border-color: var(--reference-navy);
+}
+.ws-fact-row,
+.ws-check-row,
+.ws-log-entry,
+.ws-activity-list > div,
+.ws-stack-table > div {
+  border-color: #e1ecf7;
+}
+.ws-progress {
+  background: #e4eef8;
+}
+.ws-progress > i,
+.ws-check-row.taken .ws-check-box,
+.ws-switch[data-on='true'] {
+  background: var(--reference-royal);
+  border-color: var(--reference-royal);
+}
+.ws-week {
+  background: var(--reference-paper);
+}
+.ws-week button {
+  background: var(--reference-soft);
+  color: #6f7d93;
+}
+.ws-week button[aria-pressed='true'] {
+  background: #e1f3ff;
+  color: var(--reference-blue);
+}
+.ws-week .has-log {
+  background: var(--reference-royal);
+}
+.ws-note {
+  background: #fffbec;
+  border-color: #fff5d8;
+  color: #846620;
+}
+.ws-day-landscape h1 > span,
+.ws-arc-sun {
+  color: var(--reference-yellow);
+  background-color: var(--reference-yellow);
+}
+.ws-day-landscape h1 > span {
+  background: transparent;
+}
+.ws-arc-sun {
+  box-shadow:
+    0 0 0 11px #bbddff50,
+    0 0 0 23px #bbddff25;
+}
+.ws-badge {
+  color: #fafdff;
+  background: #ffffff26;
+  border-color: #d9e9ff55;
+}
+.ws-demo-note {
+  color: #fafdff;
+  background: #0d337c33;
+  border-color: #ffffff30;
+}
+.discharge-research strong {
+  color: #2453cb;
+}
+.discharge-research > p {
+  color: #263248;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: clamp(20px, 1.55vw, 29px);
+  font-weight: 400;
+  line-height: 1.4;
+}
+.discharge-research a {
+  color: #2453cb;
+}
+.confirm-dialog {
+  background: var(--reference-paper);
+  color: var(--reference-navy);
+}
+.confirm-dialog::backdrop {
+  background: #17253f70;
+  backdrop-filter: blur(5px);
+}
+.confirm-dialog .dialog-icon {
+  background: var(--reference-tint);
+  color: var(--reference-royal);
+}
+.mobile-nav,
+.mobile-more > div,
+.ws-reading > div {
+  background: var(--reference-paper);
+  border-color: var(--reference-line);
+}
+.mobile-nav a.active {
+  color: var(--reference-blue);
+  background: #e6f3ff;
+}
+@media (min-width: 901px) {
+  .sidebar {
+    background: linear-gradient(
+      180deg,
+      #1e4dc3 0%,
+      #2453cb 21%,
+      #295bd4 42%,
+      #3066db 64%,
+      #407fd9 85%,
+      #4b8ed8 100%
+    );
+    width: 276px;
+    padding-inline: 20px;
+    border-right: 0;
+  }
+  .main-shell {
+    margin-left: 276px;
+  }
+  .page-content,
+  .topbar {
+    padding-inline: 40px;
+  }
+  .page-content {
+    max-width: none;
+  }
+  .sidebar nav a.active {
+    background: var(--reference-paper);
+    color: #263248;
+  }
+  .sidebar nav a.active .nav-copy > strong,
+  .sidebar nav a.active svg {
+    color: #263248;
+  }
+  .sidebar .nav-active-dot,
+  .sidebar-foot i {
+    background: var(--reference-yellow);
+  }
+  .ws-day-landscape h1 {
+    font-size: clamp(48px, 4.3vw, 68px);
+  }
+}
+@media (min-width: 901px) and (max-width: 1250px) {
+  .sidebar {
+    width: 224px;
+    padding-inline: 16px;
+  }
+  .main-shell {
+    margin-left: 224px;
+  }
+  .page-content,
+  .topbar {
+    padding-inline: 26px;
+  }
+}
+@media (max-width: 650px) {
+  .prototype-callout {
+    padding: 5px 10px;
+    gap: 7px;
+    border-radius: 13px;
+  }
+  .ws-filters {
+    gap: 6px;
+  }
+}
+@media print {
+  body:has(.ws-gp-sheet) .main-shell {
+    background: white !important;
+  }
+  .ws-gp-sheet {
+    box-shadow: none;
+  }
+}
